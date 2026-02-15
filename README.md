@@ -1,7 +1,6 @@
 # AutoDictate 🎤📚
 
 **Personal Voice Recording & AI Note-Taking App**  
-*Customized for Academic Use at Uskudar University*
 
 AutoDictate is your personal AI-powered study companion that transforms voice recordings into organized, searchable notes. Perfect for lectures, study sessions, and research.
 
@@ -32,5 +31,3 @@ Features a professional **Study Dark** theme designed for academic use:
 - Optimized for extended study sessions
 
 ---
-
-*Built with ❤️ for students worldwide*
