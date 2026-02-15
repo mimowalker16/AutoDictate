@@ -1,4 +1,4 @@
-import * as Audio from 'expo-audio';
+import { Audio } from 'expo-av';
 // Use legacy API to avoid deprecation warnings in SDK 54
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
@@ -10,12 +10,9 @@ export type RecordingResult = {
 };
 
 const prepareAudioMode = async () => {
-  const permission = await Audio.getPermissionsAsync();
+  const permission = await Audio.requestPermissionsAsync();
   if (!permission.granted) {
-    const response = await Audio.requestPermissionsAsync();
-    if (!response.granted) {
-      throw new Error('Microphone permission is required to record audio.');
-    }
+    throw new Error('Microphone permission is required to record audio.');
   }
   
   await Audio.setAudioModeAsync({

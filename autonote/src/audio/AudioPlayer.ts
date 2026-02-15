@@ -1,4 +1,5 @@
-import * as Audio from 'expo-audio';
+import { Audio } from 'expo-av';
+import type { AVPlaybackStatusSuccess } from 'expo-av';
 
 export const createAudioPlayer = () => {
   const sound = new Audio.Sound();
@@ -6,7 +7,7 @@ export const createAudioPlayer = () => {
 
   const loadAudio = async (
     uri: string,
-    onUpdate?: (status: any) => void,
+    onUpdate?: (status: AVPlaybackStatusSuccess) => void,
   ) => {
     if (currentUri === uri) return;
     try {
@@ -17,7 +18,9 @@ export const createAudioPlayer = () => {
     await sound.loadAsync({ uri });
     if (onUpdate) {
       sound.setOnPlaybackStatusUpdate((status) => {
-        onUpdate(status);
+        if (status.isLoaded) {
+          onUpdate(status as AVPlaybackStatusSuccess);
+        }
       });
     }
     currentUri = uri;

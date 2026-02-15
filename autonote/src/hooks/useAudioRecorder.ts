@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import * as Audio from 'expo-audio';
+import { Audio } from 'expo-av';
 import { RecordingResult, startRecording, stopRecording } from '@/audio/AudioRecorder';
 
 export const useAudioRecorder = () => {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AVPlaybackStatusSuccess } from 'expo-av';
 import { Platform } from 'react-native';
 import { createAudioPlayer } from '@/audio/AudioPlayer';
 
@@ -10,7 +11,7 @@ export const useAudioPlayer = (uri?: string) => {
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const onUpdate = useCallback((status: any) => {
+  const onUpdate = useCallback((status: AVPlaybackStatusSuccess) => {
     setReady(status.isLoaded);
     setIsPlaying(status.isPlaying);
     setPosition(status.positionMillis ?? 0);
