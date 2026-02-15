@@ -30,11 +30,10 @@ export async function uploadToSpeechmatics(audioUri: string, language: string = 
     }),
   );
   formData.append('data_file', {
-    // @ts-expect-error RN FormData
     uri: audioUri,
     type: mime,
     name,
-  });
+  } as any);
   const response = await fetch(`${BASE_URL}/jobs/`, {
     method: 'POST',
     headers: {

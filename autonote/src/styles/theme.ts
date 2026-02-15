@@ -39,6 +39,13 @@ export const colors = {
   // Recording state - professional red
   recording: '#dc2626',
   recordingGlow: 'rgba(220, 38, 38, 0.3)',
+  
+  // Legacy color properties for compatibility
+  gold: '#4a9eff',
+  goldLight: '#66b3ff',
+  goldDark: '#2e7ad3', 
+  navy: '#1a1d23',
+  navyLight: '#2a2d33',
 };
 
 export const gradients = {
@@ -58,6 +65,10 @@ export const gradients = {
   // Aurora academic - blue and cyan blend
   aurora: ['#0f1216', '#1a2332', '#0f1216'],
   auroraBlue: ['rgba(74, 158, 255, 0.1)', 'rgba(26, 35, 50, 0.3)', 'rgba(74, 158, 255, 0.1)'],
+  auroraGold: ['rgba(74, 158, 255, 0.1)', 'rgba(26, 35, 50, 0.3)', 'rgba(74, 158, 255, 0.1)'],
+  
+  // Legacy gradient properties for compatibility  
+  gold: ['#2e7ad3', '#4a9eff', '#66b3ff'],
 } as const;
 
 export const glass = {
