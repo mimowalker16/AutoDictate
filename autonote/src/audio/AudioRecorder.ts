@@ -1,4 +1,4 @@
-import { Audio } from 'expo-audio';
+import * as Audio from 'expo-audio';
 // Use legacy API to avoid deprecation warnings in SDK 54
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
@@ -10,10 +10,14 @@ export type RecordingResult = {
 };
 
 const prepareAudioMode = async () => {
-  const permission = await Audio.requestPermissionsAsync();
+  const permission = await Audio.getPermissionsAsync();
   if (!permission.granted) {
-    throw new Error('Microphone permission is required to record audio.');
+    const response = await Audio.requestPermissionsAsync();
+    if (!response.granted) {
+      throw new Error('Microphone permission is required to record audio.');
+    }
   }
+  
   await Audio.setAudioModeAsync({
     allowsRecordingIOS: true,
     playsInSilentModeIOS: true,
@@ -25,13 +29,7 @@ const prepareAudioMode = async () => {
 export const startRecording = async () => {
   await prepareAudioMode();
   const recording = new Audio.Recording();
-  const options = {
-    ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-    ios: {
-      ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios,
-      isMeteringEnabled: true,
-    },
-  };
+  const options = Audio.RecordingOptionsPresets.HIGH_QUALITY;
   await recording.prepareToRecordAsync(options);
   await recording.startAsync();
   return recording;
@@ -39,8 +37,8 @@ export const startRecording = async () => {
 
 export const stopRecording = async (recording: Audio.Recording): Promise<RecordingResult> => {
   await recording.stopAndUnloadAsync();
-  const status = await recording.getStatusAsync();
   const uri = recording.getURI();
+  const status = await recording.getStatusAsync();
   const duration = status.durationMillis ?? 0;
   const fileName = uri?.split('/').pop() ?? `autodictate-${Date.now()}.m4a`;
 

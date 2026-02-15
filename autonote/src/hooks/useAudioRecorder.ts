@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Audio } from 'expo-audio';
+import * as Audio from 'expo-audio';
 import { RecordingResult, startRecording, stopRecording } from '@/audio/AudioRecorder';
 
 export const useAudioRecorder = () => {
@@ -29,7 +29,8 @@ export const useAudioRecorder = () => {
           setLevel(normalized);
         }
       } catch {
-        // ignore meter errors
+        // Fallback to simple visual feedback
+        setLevel(Math.random() * 0.3 + 0.4);
       }
     }, 120);
   }, [stopMeter]);
