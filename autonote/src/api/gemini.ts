@@ -18,9 +18,9 @@ type GeminiResponse = {
 };
 
 const buildPrompt = (transcript: string, timestamps: WordTimestamp[]) => `
-Analyze this academic/lecture content and return a structured JSON response.
+Analyze this academic/lecture content and return ONLY a valid JSON object. Do not include any text before or after the JSON.
 
-IMPORTANT: Respond in both Turkish and English for bilingual students:
+Return in both Turkish and English for bilingual students:
 
 {
   "title": "Academic topic title (max 8 words)",
@@ -35,6 +35,8 @@ IMPORTANT: Respond in both Turkish and English for bilingual students:
     { "word": "technical term", "approx_time": "00:12" }
   ]
 }
+
+CRITICAL: Return ONLY the JSON object above. No explanations, no markdown, no extra text.
 
 Focus on:
 - Academic terminology and concepts
@@ -70,13 +72,22 @@ export async function summarizeWithGemini(
 
   let parsed: GeminiResponse;
   try {
-    const cleaned = text.replace(/```json|```/g, '').trim();
-    parsed = JSON.parse(cleaned);
+    // Extract JSON from response - find first { and last }
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error('No JSON object found in response');
+    }
+    
+    const jsonText = text.slice(firstBrace, lastBrace + 1);
+    parsed = JSON.parse(jsonText);
   } catch (error) {
     console.error('Gemini parse error:', error);
+    console.error('Raw response:', text.slice(0, 500)); // Log first 500 chars
     parsed = {
       title: '',
-      summary: text,
+      summary: text.slice(0, 200), // Use first 200 chars as fallback
       key_points: [],
       actions: [],
       timed_keywords: [],
@@ -84,16 +95,29 @@ export async function summarizeWithGemini(
   }
 
   // Use Turkish or English based on availability (bilingual support)
-  const fallbackFromSummary = (parsed.summary || parsed.summary_tr || '').split('\n')?.[0]?.trim() ?? '';
-  const title = (parsed.title || parsed.title_tr || fallbackFromSummary || '').trim();
-  const summary = parsed.summary_tr || parsed.summary || '';
-  const keyPoints = parsed.key_points_tr?.length ? parsed.key_points_tr : parsed.key_points || [];
-  const actionItems = parsed.actions_tr?.length ? parsed.actions_tr : parsed.actions || [];
+  // Ensure all fields are properly typed (not stringified JSON)
+  const getSafeString = (value: any): string => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+    return String(value || '');
+  };
+
+  const getSafeArray = (value: any): string[] => {
+    if (Array.isArray(value)) return value.map(String);
+    if (typeof value === 'string') return [value];
+    return [];
+  };
+
+  const fallbackFromSummary = getSafeString(parsed.summary || parsed.summary_tr).split('\n')?.[0]?.trim() ?? '';
+  const title = (getSafeString(parsed.title || parsed.title_tr) || fallbackFromSummary || 'Başlıksız Not / Untitled Note').trim();
+  const summary = getSafeString(parsed.summary_tr || parsed.summary || 'Özet oluşturulamadı / Summary unavailable');
+  const keyPoints = getSafeArray(parsed.key_points_tr?.length ? parsed.key_points_tr : parsed.key_points);
+  const actionItems = getSafeArray(parsed.actions_tr?.length ? parsed.actions_tr : parsed.actions);
   
   const timedKeywords: TimedKeyword[] =
     parsed.timed_keywords?.map((k) => ({
-      keyword: k.word,
-      time: timeToSeconds(k.approx_time),
+      keyword: String(k.word || ''),
+      time: timeToSeconds(String(k.approx_time || '0:00')),
     })) ?? [];
 
   return {
