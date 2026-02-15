@@ -1,0 +1,198 @@
+You are an expert full-stack mobile engineer. 
+Generate a complete React Native application built with Expo called "Autonote".
+
+The app must include:
+
+===================================================
+               1. PROJECT SETUP
+===================================================
+
+• Use the latest React Native + Expo SDK.
+• Create a clean, modular folder structure:
+  /src
+    /screens
+    /components
+    /services
+    /hooks
+    /styles
+    /utils
+    /context
+    /audio
+    /api
+• Add dotenv support using: react-native-dotenv or expo-constants + babel plugin.
+• Create a `.env` file with:
+    SPEECHMATICS_API_KEY="YOUR_SPEECHMATICS_KEY"
+    GEMINI_API_KEY="YOUR_GEMINI_KEY"
+
+• Load variables safely inside the code using "import { ... } from '@env';".
+
+===================================================
+               2. MAIN FEATURES
+===================================================
+
+### FEATURE A — AUDIO RECORDING
+• Implement live audio recording using expo-av.
+• Single large button:
+    - Press to start recording
+    - Press again to stop
+• Save audio files locally with URI.
+• Store metadata: duration, date, filename.
+
+### FEATURE B — SEND AUDIO TO SPEECHMATICS
+• After stopping recording:
+    - Upload the audio file (WAV or FLAC) to Speechmatics using:
+        POST https://asr.api.speechmatics.com/v2/jobs/
+    - Include the API KEY from `.env`.
+• Speechmatics response must include:
+    - Full transcription text
+    - Word-by-word timestamps: start time and end time for each word.
+
+### FEATURE C — GEMINI SUMMARY + KEY NOTES
+• Send the full transcription to Gemini API using the GEMINI_API_KEY.
+• Request:
+    - A structured summary
+    - Bullet points of key ideas
+    - List of action items
+• Include:
+    - A field "timedKeywords": each key point must be associated with approx timestamps detected from the transcript.
+
+### FEATURE D — TIMELINE INTERACTIVE
+• In the note detail page:
+    - Display the transcript divided into blocks.
+    - Beside each segment: show its timestamp (mm:ss).
+    - When the user taps a segment → audio player jumps to that exact moment.
+• Use expo-av audio player.
+
+### FEATURE E — NOTES EDITOR
+• User can:
+    - Edit summary
+    - Edit bullet points
+    - Add new notes
+• Changes must be saved locally (AsyncStorage).
+
+### FEATURE F — RECORDINGS LIST
+• Show list of past recordings:
+    - Title
+    - Date
+    - Duration
+    - Summary preview
+• Tap → open detail with:
+    - Audio player
+    - Summary
+    - Notes
+    - Timeline
+
+===================================================
+               3. UI / DESIGN
+===================================================
+
+• Style should be UNIQUE, modern, aesthetic.
+• Use:
+    - Rounded glassmorphism style cards
+    - Soft neon accent color (blue/purple)
+    - Dark background gradient
+    - Large circular button for record
+• Add smooth transitions using:
+    - React Native Reanimated
+    - Fade/slide animations between screens
+
+===================================================
+               4. REQUIRED SCREENS
+===================================================
+
+### 1) RecordScreen
+- Big glowing circular record button
+- Text: "Tap to start recording"
+- After recording → automatically navigate to ProcessingScreen
+
+### 2) ProcessingScreen
+- Animated loader
+- Steps:
+    "Uploading audio..."
+    "Transcribing..."
+    "Generating notes..."
+- Calls Speechmatics → then Gemini
+- Saves final result locally
+- Navigates to NoteDetailScreen
+
+### 3) NotesListScreen
+- List of past notes
+- Floating button: "New Recording"
+
+### 4) NoteDetailScreen
+- Audio player with seek bar
+- Summary section (editable)
+- Key Points list (editable)
+- "Timeline" section:
+    - Word blocks with timestamps
+    - Tap → jump audio to that timestamp
+
+===================================================
+               5. SERVICES TO IMPLEMENT
+===================================================
+
+### /api/speechmatics.js
+• uploadAudio(fileUri)
+• getTranscription(jobId)
+• parse timestamps
+
+### /api/gemini.js
+• summarize(transcript)
+• return structured summary + key points + timestamps
+
+### /audio/AudioRecorder.js
+• startRecording()
+• stopRecording()
+• getDuration()
+
+### /audio/AudioPlayer.js
+• play()
+• pause()
+• seekTo(ms)
+• loadAudio(uri)
+
+===================================================
+               6. LOCAL STORAGE
+===================================================
+
+Use AsyncStorage with structure:
+
+{
+  id,
+  audioUri,
+  duration,
+  date,
+  transcript,
+  summary,
+  notes,
+  timeline: [
+     { word: "...", start: 12.3, end: 13.1 }
+  ]
+}
+
+===================================================
+               7. GENERATE FULL CODE
+===================================================
+
+Generate:
+✔ Full Expo project structure  
+✔ Complete source code for all screens  
+✔ All services (Speechmatics + Gemini)  
+✔ Timeline logic + timestamp parser  
+✔ Audio recorder + player hooks  
+✔ Navigation (React Navigation)  
+✔ UI components (buttons, cards, layout)  
+✔ Example .env  
+✔ Dependencies list  
+✔ Styles (glassmorphism + neon)  
+✔ Comments for clarity  
+
+Create a final ready-to-run Expo project.
+
+
+
+# ============================================
+#        AUTONOTE — CONFIGURATION ENV
+# ============================================
+
+db3 les api kaqnou hna

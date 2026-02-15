@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "AutoDictate",
+    "slug": "autodictate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo_meme-removebg-preview.png",
+    "scheme": "autodictate",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.autodictate.app"
+    },
+    "android": {
+      "package": "com.autodictate.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0e1f",
+        "foregroundImage": "./assets/images/logo_meme-removebg-preview.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/logo_meme-removebg-preview.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false,
+      "reactCompiler": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "60ef1e6e-fba2-4294-b393-364151cb2cc0"
+      }
+    }
+  }
+}

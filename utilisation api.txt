@@ -1,0 +1,191 @@
+1. Ton fichier .env (à copier/coller)
+
+Crée un fichier .env à la racine :
+
+# ============================================
+#  AUTONOTE — ENV CONFIG
+# ============================================
+
+# ---- Speechmatics ----
+SPEECHMATICS_API_KEY=YOUR_SPEECHMATICS_KEY
+
+# ---- Google Gemini 2.0 Flash ----
+GEMINI_API_KEY=YOUR_GEMINI_KEY
+
+✅ 2. Configuration Babel (obligatoire)
+
+Dans babel.config.js, ajoute dotenv :
+
+module.exports = function (api) {
+  api.cache(true);
+  return {
+    presets: ["babel-preset-expo"],
+    plugins: [
+      [
+        "module:react-native-dotenv",
+        {
+          moduleName: "@env",
+          path: ".env",
+          safe: false,
+          allowUndefined: true,
+        },
+      ],
+    ],
+  };
+};
+
+✅ 3. Module : speechmatics.js (prêt à utiliser)
+
+📌 Ce module s’occupe de :
+
+envoyer l’audio
+
+récupérer le job
+
+récupérer la transcription
+
+parser les timestamps
+
+// src/api/speechmatics.js
+
+import { SPEECHMATICS_API_KEY } from "@env";
+
+const BASE_URL = "https://asr.api.speechmatics.com/v2";
+
+// ---------------------------------------------
+// 1. UPLOAD AUDIO FILE → RETURNS JOB ID
+// ---------------------------------------------
+export async function uploadToSpeechmatics(audioUri) {
+  const formData = new FormData();
+  formData.append("data_file", {
+    uri: audioUri,
+    type: "audio/wav",
+    name: "recording.wav",
+  });
+
+  const response = await fetch(`${BASE_URL}/jobs/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${SPEECHMATICS_API_KEY}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Erreur lors de l'envoi à Speechmatics");
+  }
+
+  const json = await response.json();
+  return json.id; // job ID
+}
+
+// ---------------------------------------------
+// 2. CHECK TRANSCRIPTION (POLLING OPTIONAL)
+// ---------------------------------------------
+export async function getSpeechmaticsTranscript(jobId) {
+  const response = await fetch(`${BASE_URL}/jobs/${jobId}/transcript`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${SPEECHMATICS_API_KEY}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Erreur récupération transcription Speechmatics");
+  }
+
+  return await response.json();
+}
+
+// ---------------------------------------------
+// 3. PARSE WORD TIMESTAMPS INTO CLEAN FORMAT
+// ---------------------------------------------
+export function parseSpeechmaticsTimestamps(result) {
+  if (!result || !result.results || !result.results[0]) {
+    return [];
+  }
+
+  const words = result.results[0].words;
+
+  return words.map((w) => ({
+    word: w.word,
+    start: w.start_time,
+    end: w.end_time,
+  }));
+}
+
+✅ 4. Module : gemini.js (version Gemini-2.0-flash)
+// src/api/gemini.js
+
+import { GEMINI_API_KEY } from "@env";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// MODEL : GEMINI 2.0 FLASH
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash",
+});
+
+// ---------------------------------------------------
+// GENERATE SUMMARY + KEY POINTS + ACTION ITEMS
+// ---------------------------------------------------
+export async function summarizeWithGemini(transcript, timestamps = []) {
+  try {
+    const prompt = `
+Analyse le texte et retourne un JSON structuré obligatoirement.
+
+Retourne :
+{
+  "resume": "",
+  "points_importants": [],
+  "actions": [],
+  "timed_keywords": [
+    { "word": "...", "approx_time": "00:12" }
+  ]
+}
+
+Voici la transcription complète :
+${transcript}
+
+Voici les timestamps disponibles :
+${JSON.stringify(timestamps, null, 2)}
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+
+    return text; // JSON string
+  } catch (err) {
+    console.error("Erreur Gemini:", err);
+    throw err;
+  }
+}
+
+✅ 5. Exemple d’utilisation dans ton app
+import { uploadToSpeechmatics, getSpeechmaticsTranscript, parseSpeechmaticsTimestamps } from "../api/speechmatics";
+import { summarizeWithGemini } from "../api/gemini";
+
+async function processRecording(audioUri) {
+  // 1. Envoyer fichier audio → Speechmatics
+  const jobId = await uploadToSpeechmatics(audioUri);
+
+  // 2. Récupérer transcription + mots + timestamps
+  const fullTranscript = await getSpeechmaticsTranscript(jobId);
+
+  // texte complet
+  const transcriptText = fullTranscript.results?.[0]?.text || "";
+
+  // timestamps mot par mot
+  const timestamps = parseSpeechmaticsTimestamps(fullTranscript);
+
+  // 3. Envoyer tout à Gemini 2.0 Flash
+  const analysis = await summarizeWithGemini(transcriptText, timestamps);
+
+  return {
+    transcript: transcriptText,
+    timestamps,
+    analysis,
+  };
+}
