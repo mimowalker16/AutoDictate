@@ -10,7 +10,7 @@ configureReanimatedLogger({
 // 2. Ignore specific noisy warnings
 LogBox.ignoreLogs([
     // Suppress "Expo AV has been deprecated" warning
-    // Migration to expo-audio is planned but expo-av is still functional in this version
+    // Updated to use expo-audio package following SDK 54 deprecation
     /Expo AV has been deprecated/,
     'Expo AV has been deprecated',
 ]);

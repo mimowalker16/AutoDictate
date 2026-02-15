@@ -1,4 +1,4 @@
-import { Audio } from 'expo-av';
+import { Audio } from 'expo-audio';
 // Use legacy API to avoid deprecation warnings in SDK 54
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';

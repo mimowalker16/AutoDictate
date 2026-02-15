@@ -36,7 +36,7 @@ src/
 ```
 
 ## Features
-- **Record** with a glowing circular button (expo-av).  
+- **Record** with a glowing circular button (expo-audio).  
 - **Processing** pipeline: upload to Speechmatics, poll transcription, then summarize with Gemini (summary, key points, action items, timed keywords).  
 - **Notes list** with date/duration/preview and quick navigation.  
 - **Note detail**: audio player + seek bar, editable summary/key points/action items/notes, word-timeline blocks that jump playback on tap.  
@@ -51,7 +51,7 @@ GEMINI_API_KEY=...
 ```
 
 ## Dependencies to install
-`expo-av`, `expo-blur`, `expo-linear-gradient`, `@react-native-async-storage/async-storage`, `react-native-dotenv` (plus existing Expo/React Navigation stack). Use `npm install` or `npx expo install` to align versions with SDK 54.
+`expo-audio`, `expo-blur`, `expo-linear-gradient`, `@react-native-async-storage/async-storage`, `react-native-dotenv` (plus existing Expo/React Navigation stack). Use `npm install` or `npx expo install` to align versions with SDK 54.
 
 ## Notes
 - Timeline uses Speechmatics word timestamps to drive seeking and keyword chips.  
