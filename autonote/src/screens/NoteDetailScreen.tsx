@@ -61,10 +61,10 @@ export default function NoteDetailScreen() {
       <GradientScreen>
         <View style={styles.notFound}>
           <Text style={styles.notFoundEmoji}>🔍</Text>
-          <Text style={styles.error}>Note introuvable</Text>
+          <Text style={styles.error}>Not bulunamadı / Note not found</Text>
           <Pressable onPress={() => router.replace('/')} style={styles.backLink}>
             <Feather name="arrow-left" size={18} color={colors.gold} />
-            <Text style={styles.link}>Retour</Text>
+            <Text style={styles.link}>Geri / Back</Text>
           </Pressable>
         </View>
       </GradientScreen>
@@ -95,7 +95,7 @@ export default function NoteDetailScreen() {
           <LinearGradient colors={gradients.gold} style={styles.eyebrowBadge}>
             <Text style={styles.eyebrow}>RECORDED</Text>
           </LinearGradient>
-          <Text style={styles.title}>{note.title || 'Note audio'}</Text>
+          <Text style={styles.title}>{note.title || 'Ses notu / Audio note'}</Text>
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <Feather name="clock" size={14} color={colors.muted} />
@@ -115,7 +115,7 @@ export default function NoteDetailScreen() {
         <GlassCard glowing>
           <View style={styles.playerHeader}>
             <Feather name="headphones" size={20} color={colors.gold} />
-            <Text style={styles.sectionTitle}>Lecteur audio</Text>
+            <Text style={styles.sectionTitle}>Ses oynatıcı / Audio player</Text>
           </View>
           <View style={styles.playerRow}>
             <Pressable
@@ -139,7 +139,7 @@ export default function NoteDetailScreen() {
           {playbackError ? (
             <Text style={styles.errorText}>{playbackError}</Text>
           ) : (
-            <Text style={styles.hint}>Touche la barre ou la timeline pour naviguer</Text>
+            <Text style={styles.hint}>Gezinmek için çubuğa veya zaman çizgisine dokunun / Tap bar or timeline to navigate</Text>
           )}
         </GlassCard>
       </AnimatedCard>
@@ -147,13 +147,13 @@ export default function NoteDetailScreen() {
       {/* Summary */}
       <AnimatedCard delay={200}>
         <GlassCard>
-          <SectionHeader icon="file-text" title="Résumé" />
+          <SectionHeader icon="file-text" title="Özet / Summary" />
           <TextInput
             multiline
             value={summary}
             onChangeText={setSummary}
             onBlur={saveSummary}
-            placeholder="Éditer le résumé..."
+            placeholder="Özeti düzenle / Edit summary..."
             placeholderTextColor={colors.muted}
             style={styles.textArea}
           />
@@ -163,23 +163,23 @@ export default function NoteDetailScreen() {
       {/* Key Points & Actions */}
       <AnimatedCard delay={300}>
         <GlassCard>
-          <SectionHeader icon="star" title="Points clés" />
+          <SectionHeader icon="star" title="Anahtar noktalar / Key points" />
           <TextInput
             multiline
             value={keyPointsText}
             onChangeText={setKeyPointsText}
             onBlur={saveKeyPoints}
-            placeholder="Un point par ligne"
+            placeholder="Her satıra bir nokta / One point per line"
             placeholderTextColor={colors.muted}
             style={styles.textArea}
           />
-          <SectionHeader icon="check-circle" title="Actions" style={{ marginTop: spacing.lg }} />
+          <SectionHeader icon="check-circle" title="Eylemler / Actions" style={{ marginTop: spacing.lg }} />
           <TextInput
             multiline
             value={actionsText}
             onChangeText={setActionsText}
             onBlur={saveActions}
-            placeholder="Une action par ligne"
+            placeholder="Her satıra bir eylem / One action per line"
             placeholderTextColor={colors.muted}
             style={styles.textArea}
           />
@@ -189,13 +189,13 @@ export default function NoteDetailScreen() {
       {/* Notes */}
       <AnimatedCard delay={400}>
         <GlassCard>
-          <SectionHeader icon="edit-3" title="Notes personnelles" />
+          <SectionHeader icon="edit-3" title="Kişisel notlar / Personal notes" />
           <TextInput
             multiline
             value={notesText}
             onChangeText={setNotesText}
             onBlur={saveNotes}
-            placeholder="Ajoute tes notes ou décisions..."
+            placeholder="Notlarını veya kararlarını ekle / Add your notes or decisions..."
             placeholderTextColor={colors.muted}
             style={styles.textArea}
           />

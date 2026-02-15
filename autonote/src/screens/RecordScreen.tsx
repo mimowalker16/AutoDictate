@@ -18,7 +18,7 @@ import { RecordButton } from '@/components/RecordButton';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { colors, gradients, radius, spacing, animations } from '@/styles/theme';
 
-const highlights = ['Horodatage auto', 'Résumé Gemini', 'Lecture timeline'];
+const highlights = ['Otomatik zaman damgası / Auto timestamps', 'AI özeti / AI summary', 'Zaman çizgisi / Timeline'];
 
 // Audio Waveform Visualizer Component
 const WaveformVisualizer: React.FC<{ isRecording: boolean; level: number }> = ({
@@ -189,7 +189,7 @@ export default function RecordScreen() {
     opacity: statusGlow.value,
   }));
 
-  const statusLabel = isRecording ? '🔴 Enregistrement...' : '✦ Prêt à capter';
+  const statusLabel = isRecording ? '🔴 Kaydediliyor... / Recording...' : '✦ Hazır / Ready';
 
   return (
     <GradientScreen>
@@ -201,9 +201,9 @@ export default function RecordScreen() {
           </LinearGradient>
           <Text style={styles.crown}>👑</Text>
         </View>
-        <Text style={styles.title}>Enregistrer en un tap</Text>
+        <Text style={styles.title}>Tek dokunuşla kayıt / Record in one tap</Text>
         <Text style={styles.subtitle}>
-          Une note claire, des timestamps précis, résumé automatique.
+          Net notlar, kesin zaman damgaları, otomatik özet / Clear notes, precise timestamps, auto summary.
         </Text>
       </Animated.View>
 
@@ -244,7 +244,7 @@ export default function RecordScreen() {
             ))}
           </View>
           <Text style={styles.helper}>
-            Appuie, parle, stoppe. On s'occupe du reste ✨
+            Bas, konuş, durdur. Gerisini biz hallederiz ✨ / Tap, speak, stop. We handle the rest ✨
           </Text>
         </GlassCard>
       </Animated.View>

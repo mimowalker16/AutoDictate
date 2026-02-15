@@ -44,10 +44,10 @@ export default function NotesListScreen() {
   );
 
   const confirmDelete = (id: string) => {
-    Alert.alert('Supprimer la note ?', 'Cette action est définitive.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert('Notu sil? / Delete note?', 'Bu işlem geri alınamaz / This action is permanent.', [
+      { text: 'İptal / Cancel', style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: 'Sil / Delete',
         style: 'destructive',
         onPress: () => deleteNote(id),
       },
@@ -77,12 +77,12 @@ export default function NotesListScreen() {
             </View>
           </View>
           <Animated.View style={[styles.pill, counterStyle]}>
-            <Text style={styles.pillText}>{notes.length} notes</Text>
+            <Text style={styles.pillText}>{notes.length} not / notes</Text>
           </Animated.View>
         </View>
-        <Text style={styles.title}>Tes enregistrements</Text>
+        <Text style={styles.title}>Kayıtların / Your Recordings</Text>
         <Text style={styles.subtitle}>
-          Réécoute, explore la timeline, partage le résumé Gemini.
+          Dinle, zaman çizgisini incele, AI özet paylaş / Listen, explore timeline, share AI summary.
         </Text>
       </Animated.View>
 
@@ -112,7 +112,7 @@ export default function NotesListScreen() {
         />
       )}
 
-      <FloatingActionButton label="Nouvel enregistrement" onPress={() => router.push('/record')} />
+      <FloatingActionButton label="Yeni kayıt / New recording" onPress={() => router.push('/record')} />
     </GradientScreen>
   );
 }
@@ -224,9 +224,9 @@ const EmptyState: React.FC = () => {
         <View style={styles.emptyIcon}>
           <Text style={styles.emptyEmoji}>🎙️</Text>
         </View>
-        <Text style={styles.emptyTitle}>Pas encore de note</Text>
+        <Text style={styles.emptyTitle}>Henüz not yok / No notes yet</Text>
         <Text style={styles.muted}>
-          Lance un enregistrement pour voir la magie Gemini ✨
+          AI sihirini görmek için kayıt başlat ✨ / Start recording to see AI magic ✨
         </Text>
       </GlassCard>
     </Animated.View>

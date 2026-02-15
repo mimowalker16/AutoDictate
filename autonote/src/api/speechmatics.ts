@@ -13,7 +13,7 @@ const authHeader = () => {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Upload audio and return job id
-export async function uploadToSpeechmatics(audioUri: string, language: string = 'fr') {
+export async function uploadToSpeechmatics(audioUri: string, language: string = 'tr') {
   if (!audioUri) throw new Error('Audio file is missing');
   const lower = audioUri.toLowerCase();
   const isWav = lower.endsWith('.wav');

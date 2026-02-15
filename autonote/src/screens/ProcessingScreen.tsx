@@ -119,10 +119,10 @@ export default function ProcessingScreen() {
 
   const steps = useMemo(
     () => [
-      { label: 'Upload audio...', active: activeIndex === 0, done: activeIndex > 0 },
-      { label: 'Transcription...', active: activeIndex === 1, done: activeIndex > 1 },
-      { label: 'Génération résumé...', active: activeIndex === 2, done: activeIndex > 2 },
-      { label: 'Sauvegarde...', active: activeIndex === 3, done: activeIndex > 3 },
+      { label: 'Ses dosyası yükleniyor... / Uploading audio...', active: activeIndex === 0, done: activeIndex > 0 },
+      { label: 'Transkript oluşturuluyor... / Transcribing...', active: activeIndex === 1, done: activeIndex > 1 },
+      { label: 'AI ile özet hazırlanıyor... / AI summarizing...', active: activeIndex === 2, done: activeIndex > 2 },
+      { label: 'Kaydediliyor... / Saving...', active: activeIndex === 3, done: activeIndex > 3 },
     ],
     [activeIndex],
   );
@@ -143,7 +143,7 @@ export default function ProcessingScreen() {
         let chosenTitle = defaultTitle;
 
         if (Platform.OS === 'web' && params.audioUri?.startsWith('blob:')) {
-          throw new Error("Upload non supporté pour les enregistrements web.");
+          throw new Error("Web kayıtları desteklenmiyor / Web recordings not supported");
         }
 
         const jobId = await uploadToSpeechmatics(params.audioUri!);
@@ -154,10 +154,10 @@ export default function ProcessingScreen() {
           (status) => setActiveIndex(status === 'done' ? 2 : 1),
         );
 
-        setTranscript(transcriptText || '(Vide)');
+        setTranscript(transcriptText || '(Boş / Empty)');
         setActiveIndex(2);
 
-        let summaryText = 'Transcript vide.';
+        let summaryText = 'Transkript boş / Transcript empty.';
         let points: string[] = [];
         let acts: string[] = [];
         if (transcriptText && transcriptText.length > 0) {
@@ -168,7 +168,7 @@ export default function ProcessingScreen() {
             acts = g.actionItems ?? [];
             if (g.title?.trim()) chosenTitle = g.title.trim();
           } catch {
-            summaryText = 'Résumé indisponible.';
+            summaryText = 'Özet kullanılamıyor / Summary unavailable.';
           }
         }
         setSummary(summaryText);
@@ -196,7 +196,7 @@ export default function ProcessingScreen() {
         setActiveIndex(4);
         router.replace({ pathname: '/note/[id]', params: { id: note.id } });
       } catch (err) {
-        const msg = (err as Error).message || 'Erreur réseau';
+        const msg = (err as Error).message || 'Ağ hatası / Network error';
         setError(msg);
         setFailed(true);
       }

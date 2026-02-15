@@ -6,32 +6,44 @@ const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const model = genAI?.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 type GeminiResponse = {
-  titre?: string;
-  resume: string;
-  points_importants: string[];
+  title?: string;
+  title_tr?: string;
+  summary: string;
+  summary_tr?: string;
+  key_points: string[];
+  key_points_tr?: string[];
   actions: string[];
+  actions_tr?: string[];
   timed_keywords: { word: string; approx_time: string }[];
 };
 
 const buildPrompt = (transcript: string, timestamps: WordTimestamp[]) => `
-Analyse le texte et retourne un JSON structurÉ obligatoirement.
-Retourne :
+Analyze this academic/lecture content and return a structured JSON response.
+
+IMPORTANT: Respond in both Turkish and English for bilingual students:
+
 {
-  "titre": "Titre court, clair, max 8 mots",
-  "resume": "",
-  "points_importants": [],
-  "actions": [],
+  "title": "Academic topic title (max 8 words)",
+  "title_tr": "Akademik konu başlığı (max 8 kelime)", 
+  "summary": "Detailed academic summary in English",
+  "summary_tr": "Türkçe detaylı akademik özet",
+  "key_points": ["Important academic concepts", "Key learning objectives"],
+  "key_points_tr": ["Önemli akademik kavramlar", "Ana öğrenme hedefleri"],
+  "actions": ["Study tasks", "Review items", "Research topics"],
+  "actions_tr": ["Çalışma görevleri", "Gözden geçirme maddeleri", "Araştırma konuları"],
   "timed_keywords": [
-    { "word": "...", "approx_time": "00:12" }
+    { "word": "technical term", "approx_time": "00:12" }
   ]
 }
 
-Transcription complète :
-${transcript}
+Focus on:
+- Academic terminology and concepts
+- University-level content structure  
+- Study-relevant information
+- Turkish and international academic context
 
-Timestamps disponibles :
-${JSON.stringify(timestamps, null, 2)}
-`;
+Transcription:
+${transcript}`;
 
 const timeToSeconds = (value: string): number => {
   const [m, s] = value.split(':').map((part) => Number(part));
@@ -61,18 +73,23 @@ export async function summarizeWithGemini(
     const cleaned = text.replace(/```json|```/g, '').trim();
     parsed = JSON.parse(cleaned);
   } catch (error) {
-    console.error('Erreur Gemini parse:', error);
+    console.error('Gemini parse error:', error);
     parsed = {
-      titre: '',
-      resume: text,
-      points_importants: [],
+      title: '',
+      summary: text,
+      key_points: [],
       actions: [],
       timed_keywords: [],
     };
   }
 
-  const fallbackFromSummary = parsed.resume?.split('\n')?.[0]?.trim() ?? '';
-  const title = (parsed.titre || (parsed as any).title || fallbackFromSummary || '').trim();
+  // Use Turkish or English based on availability (bilingual support)
+  const fallbackFromSummary = (parsed.summary || parsed.summary_tr || '').split('\n')?.[0]?.trim() ?? '';
+  const title = (parsed.title || parsed.title_tr || fallbackFromSummary || '').trim();
+  const summary = parsed.summary_tr || parsed.summary || '';
+  const keyPoints = parsed.key_points_tr?.length ? parsed.key_points_tr : parsed.key_points || [];
+  const actionItems = parsed.actions_tr?.length ? parsed.actions_tr : parsed.actions || [];
+  
   const timedKeywords: TimedKeyword[] =
     parsed.timed_keywords?.map((k) => ({
       keyword: k.word,
@@ -81,9 +98,9 @@ export async function summarizeWithGemini(
 
   return {
     title,
-    summary: parsed.resume ?? '',
-    keyPoints: parsed.points_importants ?? [],
-    actionItems: parsed.actions ?? [],
+    summary,
+    keyPoints,
+    actionItems,
     timedKeywords,
   };
 }
