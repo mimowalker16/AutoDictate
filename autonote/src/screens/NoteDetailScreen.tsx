@@ -37,6 +37,9 @@ const TABS = [
   { key: 'timeline', icon: 'clock', label: 'Timeline' },
 ] as const;
 
+// Tab index for the key-points/study-topics page
+const POINTS_TAB = 2;
+
 export default function NoteDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
@@ -251,15 +254,18 @@ export default function NoteDetailScreen() {
 
           <GlassCard style={{ marginTop: spacing.lg }}>
             <View style={styles.sectionHeader}>
-              <Feather name="check-circle" size={17} color={colors.accent} />
-              <Text style={styles.sectionTitle}>Actions</Text>
+              <Feather name="book-open" size={17} color={colors.accent} />
+              <Text style={styles.sectionTitle}>Study Topics</Text>
             </View>
+            <Text style={styles.sectionSubtitle}>
+              Topics from this lecture worth studying deeper
+            </Text>
             <TextInput
               multiline
               value={actionsText}
               onChangeText={setActionsText}
               onBlur={saveActions}
-              placeholder="One action per line"
+              placeholder="One topic per line"
               placeholderTextColor={colors.muted}
               style={styles.textArea}
             />
@@ -543,6 +549,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '600',
     fontSize: 15,
+  },
+  sectionSubtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    marginBottom: spacing.sm,
+    marginTop: -2,
   },
   textArea: {
     color: colors.text,

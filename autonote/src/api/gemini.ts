@@ -6,60 +6,46 @@ const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const model = genAI?.getGenerativeModel({
   model: 'gemini-1.5-pro',
   generationConfig: {
-    temperature: 0.1,      // near-deterministic — reduces hallucination
+    temperature: 0.1,
     topP: 0.9,
     topK: 20,
-    responseMimeType: 'application/json', // forces JSON-only output
+    responseMimeType: 'application/json',
   },
 });
 
 type GeminiResponse = {
-  title?: string;
-  title_tr?: string;
+  title: string;
   summary: string;
-  summary_tr?: string;
   key_points: string[];
-  key_points_tr?: string[];
-  actions: string[];
-  actions_tr?: string[];
+  study_topics: string[];
   timed_keywords: { word: string; approx_time: string }[];
 };
 
-const buildPrompt = (transcript: string, timestamps: WordTimestamp[]) => `
-You are a precise academic note-taking assistant. Your job is to extract and organize information STRICTLY FROM THE TRANSCRIPT BELOW.
+const buildPrompt = (transcript: string) => `
+You are a precise academic note-taking assistant. Extract and organize information STRICTLY FROM THE TRANSCRIPT BELOW.
 
-⚠️ CRITICAL RULES — violating these makes the output useless:
-1. NEVER invent, assume, or hallucinate any fact, term, or concept not explicitly present in the transcript.
-2. Every key point and every action item MUST be directly traceable to something spoken in the transcript.
-3. If the transcript is unclear or incomplete, reflect that honestly — do NOT fill gaps with assumed knowledge.
-4. Quote or closely paraphrase actual words from the transcript. Do not rewrite with your own domain knowledge.
+⚠️ CRITICAL RULES:
+1. DETECT the language of the transcript and respond ENTIRELY in that same language. If the lecture is in Turkish, write everything in Turkish. If English, write in English. Never translate or mix languages.
+2. NEVER invent, assume, or add any fact, term, or concept not explicitly present in the transcript.
+3. Every key point and every study topic MUST be directly traceable to something spoken in the transcript.
+4. If the transcript is unclear or incomplete, reflect that honestly.
 5. Return ONLY the JSON object. No markdown, no explanation, no text outside the JSON.
 
 OUTPUT FORMAT (valid JSON only):
 {
-  "title": "Concise title derived from the transcript topic (max 8 words, English)",
-  "title_tr": "Transkriptten türetilmiş kısa başlık (max 8 kelime, Türkçe)",
-  "summary": "A thorough paragraph summarizing what was ACTUALLY SAID. Cover the main argument or topic, key concepts introduced, and any conclusions drawn. 3-5 sentences minimum. English only.",
-  "summary_tr": "Transkriptte gerçekte söylenenlerin özeti. Ana konu, sunulan kavramlar ve varılan sonuçlar. En az 3-5 cümle. Sadece Türkçe.",
+  "title": "Concise title from the transcript topic (max 8 words, in the transcript's language)",
+  "summary": "A thorough paragraph summarizing what was ACTUALLY SAID — the main argument, concepts introduced, and conclusions drawn. Minimum 3-5 sentences. Written in the transcript's language.",
   "key_points": [
-    "Specific concept or claim explicitly stated in the transcript — use the speaker's own terminology",
-    "Another distinct point actually mentioned — not inferred, not assumed",
-    "Continue for every significant point covered (aim for 4-7 items)"
+    "A specific concept or claim explicitly stated — use the speaker's own words/terminology",
+    "Another distinct point actually mentioned (aim for 4-7 items total)"
   ],
-  "key_points_tr": [
-    "Transkriptte açıkça belirtilen kavram veya iddia — konuşmacının kendi terminolojisini kullan",
-    "Gerçekten bahsedilen başka bir nokta — çıkarım değil, varsayım değil"
-  ],
-  "actions": [
-    "Specific study task implied or stated — e.g. 'Review the definition of X mentioned at the start'",
-    "Only include tasks grounded in what was actually covered — not generic study advice"
-  ],
-  "actions_tr": [
-    "Belirtilen veya ima edilen somut çalışma görevi — örn. 'Başta bahsedilen X tanımını gözden geçir'",
-    "Sadece gerçekten ele alınan konulara dayalı görevler ekle"
+  "study_topics": [
+    "A specific topic from this lecture the student should study more deeply — e.g. 'The definition and types of X introduced in this session'",
+    "A concept that was mentioned but deserves further reading — e.g. 'The relationship between Y and Z discussed mid-lecture'",
+    "Aim for 3-6 targeted study topics directly tied to what was covered"
   ],
   "timed_keywords": [
-    { "word": "exact technical term or name spoken in transcript", "approx_time": "MM:SS" }
+    { "word": "exact technical term or name spoken", "approx_time": "MM:SS" }
   ]
 }
 
@@ -84,66 +70,36 @@ export async function summarizeWithGemini(
 }> {
   if (!model) throw new Error('Missing GEMINI_API_KEY in .env');
 
-  const prompt = buildPrompt(transcript, timestamps);
+  const prompt = buildPrompt(transcript);
   const result = await model.generateContent(prompt);
-  const response = result.response;
-  const text = response.text();
+  const text = result.response.text();
 
   let parsed: GeminiResponse;
   try {
-    // Extract JSON from response - find first { and last }
     const firstBrace = text.indexOf('{');
     const lastBrace = text.lastIndexOf('}');
-    
-    if (firstBrace === -1 || lastBrace === -1) {
-      throw new Error('No JSON object found in response');
-    }
-    
-    const jsonText = text.slice(firstBrace, lastBrace + 1);
-    parsed = JSON.parse(jsonText);
+    if (firstBrace === -1 || lastBrace === -1) throw new Error('No JSON found');
+    parsed = JSON.parse(text.slice(firstBrace, lastBrace + 1));
   } catch (error) {
     console.error('Gemini parse error:', error);
-    console.error('Raw response:', text.slice(0, 500)); // Log first 500 chars
-    parsed = {
-      title: '',
-      summary: text.slice(0, 200), // Use first 200 chars as fallback
-      key_points: [],
-      actions: [],
-      timed_keywords: [],
-    };
+    console.error('Raw response:', text.slice(0, 500));
+    parsed = { title: '', summary: text.slice(0, 300), key_points: [], study_topics: [], timed_keywords: [] };
   }
 
-  // Use Turkish or English based on availability (bilingual support)
-  // Ensure all fields are properly typed (not stringified JSON)
-  const getSafeString = (value: any): string => {
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object' && value !== null) return JSON.stringify(value);
-    return String(value || '');
-  };
+  const safe = (v: any): string => (typeof v === 'string' ? v : String(v ?? ''));
+  const safeArr = (v: any): string[] => (Array.isArray(v) ? v.map(safe).filter(Boolean) : []);
 
-  const getSafeArray = (value: any): string[] => {
-    if (Array.isArray(value)) return value.map(String);
-    if (typeof value === 'string') return [value];
-    return [];
-  };
-
-  const fallbackFromSummary = getSafeString(parsed.summary || parsed.summary_tr).split('\n')?.[0]?.trim() ?? '';
-  const title = (getSafeString(parsed.title || parsed.title_tr) || fallbackFromSummary || 'Başlıksız Not / Untitled Note').trim();
-  const summary = getSafeString(parsed.summary_tr || parsed.summary || 'Özet oluşturulamadı / Summary unavailable');
-  const keyPoints = getSafeArray(parsed.key_points_tr?.length ? parsed.key_points_tr : parsed.key_points);
-  const actionItems = getSafeArray(parsed.actions_tr?.length ? parsed.actions_tr : parsed.actions);
-  
-  const timedKeywords: TimedKeyword[] =
-    parsed.timed_keywords?.map((k) => ({
-      keyword: String(k.word || ''),
-      time: timeToSeconds(String(k.approx_time || '0:00')),
-    })) ?? [];
+  const summary = safe(parsed.summary);
+  const title = safe(parsed.title) || summary.split(' ').slice(0, 6).join(' ') || 'Untitled Note';
 
   return {
-    title,
+    title: title.trim(),
     summary,
-    keyPoints,
-    actionItems,
-    timedKeywords,
+    keyPoints: safeArr(parsed.key_points),
+    actionItems: safeArr(parsed.study_topics),
+    timedKeywords: (parsed.timed_keywords ?? []).map((k) => ({
+      keyword: safe(k.word),
+      time: timeToSeconds(safe(k.approx_time) || '0:00'),
+    })),
   };
 }
