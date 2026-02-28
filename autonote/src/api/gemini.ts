@@ -3,7 +3,15 @@ import { WordTimestamp, TimedKeyword } from '@/types/note';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
-const model = genAI?.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const model = genAI?.getGenerativeModel({
+  model: 'gemini-1.5-pro',
+  generationConfig: {
+    temperature: 0.1,      // near-deterministic — reduces hallucination
+    topP: 0.9,
+    topK: 20,
+    responseMimeType: 'application/json', // forces JSON-only output
+  },
+});
 
 type GeminiResponse = {
   title?: string;
@@ -18,33 +26,44 @@ type GeminiResponse = {
 };
 
 const buildPrompt = (transcript: string, timestamps: WordTimestamp[]) => `
-Analyze this academic/lecture content and return ONLY a valid JSON object. Do not include any text before or after the JSON.
+You are a precise academic note-taking assistant. Your job is to extract and organize information STRICTLY FROM THE TRANSCRIPT BELOW.
 
-Return in both Turkish and English for bilingual students:
+⚠️ CRITICAL RULES — violating these makes the output useless:
+1. NEVER invent, assume, or hallucinate any fact, term, or concept not explicitly present in the transcript.
+2. Every key point and every action item MUST be directly traceable to something spoken in the transcript.
+3. If the transcript is unclear or incomplete, reflect that honestly — do NOT fill gaps with assumed knowledge.
+4. Quote or closely paraphrase actual words from the transcript. Do not rewrite with your own domain knowledge.
+5. Return ONLY the JSON object. No markdown, no explanation, no text outside the JSON.
 
+OUTPUT FORMAT (valid JSON only):
 {
-  "title": "Academic topic title (max 8 words)",
-  "title_tr": "Akademik konu başlığı (max 8 kelime)", 
-  "summary": "Detailed academic summary in English",
-  "summary_tr": "Türkçe detaylı akademik özet",
-  "key_points": ["Important academic concepts", "Key learning objectives"],
-  "key_points_tr": ["Önemli akademik kavramlar", "Ana öğrenme hedefleri"],
-  "actions": ["Study tasks", "Review items", "Research topics"],
-  "actions_tr": ["Çalışma görevleri", "Gözden geçirme maddeleri", "Araştırma konuları"],
+  "title": "Concise title derived from the transcript topic (max 8 words, English)",
+  "title_tr": "Transkriptten türetilmiş kısa başlık (max 8 kelime, Türkçe)",
+  "summary": "A thorough paragraph summarizing what was ACTUALLY SAID. Cover the main argument or topic, key concepts introduced, and any conclusions drawn. 3-5 sentences minimum. English only.",
+  "summary_tr": "Transkriptte gerçekte söylenenlerin özeti. Ana konu, sunulan kavramlar ve varılan sonuçlar. En az 3-5 cümle. Sadece Türkçe.",
+  "key_points": [
+    "Specific concept or claim explicitly stated in the transcript — use the speaker's own terminology",
+    "Another distinct point actually mentioned — not inferred, not assumed",
+    "Continue for every significant point covered (aim for 4-7 items)"
+  ],
+  "key_points_tr": [
+    "Transkriptte açıkça belirtilen kavram veya iddia — konuşmacının kendi terminolojisini kullan",
+    "Gerçekten bahsedilen başka bir nokta — çıkarım değil, varsayım değil"
+  ],
+  "actions": [
+    "Specific study task implied or stated — e.g. 'Review the definition of X mentioned at the start'",
+    "Only include tasks grounded in what was actually covered — not generic study advice"
+  ],
+  "actions_tr": [
+    "Belirtilen veya ima edilen somut çalışma görevi — örn. 'Başta bahsedilen X tanımını gözden geçir'",
+    "Sadece gerçekten ele alınan konulara dayalı görevler ekle"
+  ],
   "timed_keywords": [
-    { "word": "technical term", "approx_time": "00:12" }
+    { "word": "exact technical term or name spoken in transcript", "approx_time": "MM:SS" }
   ]
 }
 
-CRITICAL: Return ONLY the JSON object above. No explanations, no markdown, no extra text.
-
-Focus on:
-- Academic terminology and concepts
-- University-level content structure  
-- Study-relevant information
-- Turkish and international academic context
-
-Transcription:
+TRANSCRIPT:
 ${transcript}`;
 
 const timeToSeconds = (value: string): number => {
