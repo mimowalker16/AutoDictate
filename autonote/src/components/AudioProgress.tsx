@@ -1,11 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, animations } from '@/styles/theme';
 import { formatMillis } from '@/utils/time';
 
@@ -19,26 +22,69 @@ export const AudioProgress: React.FC<Props> = ({ position, duration, onSeek }) =
   const [width, setWidth] = useState(1);
   const progressAnim = useSharedValue(0);
   const thumbScale = useSharedValue(1);
+  const isDragging = useSharedValue(false);
+  const widthShared = useSharedValue(1);
 
   const handleLayout = (event: LayoutChangeEvent) => {
-    setWidth(event.nativeEvent.layout.width);
+    const w = event.nativeEvent.layout.width;
+    setWidth(w);
+    widthShared.value = w;
   };
 
-  const handlePress = useCallback(
-    (event: any) => {
+  const seekToRatio = useCallback(
+    (ratio: number) => {
       if (!duration || !onSeek) return;
-      const x = event.nativeEvent.locationX;
-      const ratio = Math.min(1, Math.max(0, x / width));
-      onSeek(ratio * duration);
-      thumbScale.value = withSpring(1.4, animations.springBouncy);
-      setTimeout(() => {
-        thumbScale.value = withSpring(1, animations.spring);
-      }, 120);
+      const clamped = Math.min(1, Math.max(0, ratio));
+      onSeek(clamped * duration);
     },
-    [duration, onSeek, thumbScale, width],
+    [duration, onSeek],
   );
 
+  const hapticTick = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  // Tap gesture
+  const tapGesture = Gesture.Tap().onEnd((e) => {
+    if (!duration) return;
+    const ratio = Math.min(1, Math.max(0, e.x / widthShared.value));
+    progressAnim.value = withTiming(ratio, { duration: 80 });
+    runOnJS(hapticTick)();
+    runOnJS(seekToRatio)(ratio);
+    thumbScale.value = withSpring(1.4, animations.springBouncy);
+    thumbScale.value = withSpring(1, animations.spring);
+  });
+
+  // Pan gesture for drag-to-scrub
+  const panGesture = Gesture.Pan()
+    .onBegin((e) => {
+      isDragging.value = true;
+      thumbScale.value = withSpring(1.5, animations.springBouncy);
+      const ratio = Math.min(1, Math.max(0, e.x / widthShared.value));
+      progressAnim.value = ratio;
+      runOnJS(hapticTick)();
+      runOnJS(seekToRatio)(ratio);
+    })
+    .onUpdate((e) => {
+      const ratio = Math.min(1, Math.max(0, e.x / widthShared.value));
+      progressAnim.value = ratio;
+      runOnJS(seekToRatio)(ratio);
+    })
+    .onEnd(() => {
+      isDragging.value = false;
+      thumbScale.value = withSpring(1, animations.spring);
+    })
+    .onFinalize(() => {
+      isDragging.value = false;
+      thumbScale.value = withSpring(1, animations.spring);
+    })
+    .minDistance(0)
+    .activeOffsetX([-5, 5]);
+
+  const composed = Gesture.Race(panGesture, tapGesture);
+
   useEffect(() => {
+    if (isDragging.value) return;
     const progress = duration ? Math.min(1, position / duration) : 0;
     progressAnim.value = withTiming(progress, { duration: 100 });
   }, [duration, position, progressAnim]);
@@ -54,16 +100,18 @@ export const AudioProgress: React.FC<Props> = ({ position, duration, onSeek }) =
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={handlePress} onLayout={handleLayout} style={styles.barContainer}>
-        {/* Track */}
-        <View style={styles.track}>
-          {/* Fill */}
-          <Animated.View style={[styles.fill, progressStyle]} />
-        </View>
+      <GestureDetector gesture={composed}>
+        <Animated.View onLayout={handleLayout} style={styles.barContainer}>
+          {/* Track */}
+          <View style={styles.track}>
+            {/* Fill */}
+            <Animated.View style={[styles.fill, progressStyle]} />
+          </View>
 
-        {/* Thumb */}
-        <Animated.View style={[styles.thumb, thumbStyle]} />
-      </Pressable>
+          {/* Thumb */}
+          <Animated.View style={[styles.thumb, thumbStyle]} />
+        </Animated.View>
+      </GestureDetector>
 
       {/* Times */}
       <View style={styles.times}>

@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { GradientScreen } from '@/components/GradientScreen';
 import { GlassCard } from '@/components/GlassCard';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
@@ -20,6 +21,7 @@ import { withRepeat, withSequence } from 'react-native-reanimated';
 export default function NotesListScreen() {
   const router = useRouter();
   const { notes, ready, deleteNote } = useNotes();
+  const [search, setSearch] = useState('');
 
   const headerOpacity = useSharedValue(0);
   const headerY = useSharedValue(-15);
@@ -29,16 +31,25 @@ export default function NotesListScreen() {
     headerY.value = withSpring(0, animations.spring);
   }, [headerOpacity, headerY]);
 
-  const data = useMemo(
-    () =>
-      notes.map((note) => ({
+  const data = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return notes
+      .filter((note) => {
+        if (!q) return true;
+        return (
+          (note.title || '').toLowerCase().includes(q) ||
+          (note.summary || '').toLowerCase().includes(q) ||
+          (note.transcript || '').toLowerCase().includes(q)
+        );
+      })
+      .map((note) => ({
         ...note,
         subtitle: note.summary || note.transcript.slice(0, 80),
-      })),
-    [notes],
-  );
+      }));
+  }, [notes, search]);
 
   const confirmDelete = (id: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert('Delete note?', 'This action is permanent.', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -66,6 +77,28 @@ export default function NotesListScreen() {
         </View>
         <Text style={styles.subtitle}>Your recordings</Text>
       </Animated.View>
+
+      {/* Search */}
+      {ready && notes.length > 0 && (
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={16} color={colors.muted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search notes..."
+            placeholderTextColor={colors.muted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+            accessibilityLabel="Search notes"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch('')} hitSlop={8}>
+              <Feather name="x" size={16} color={colors.muted} />
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {/* Content */}
       {!ready ? (
@@ -141,7 +174,9 @@ const NoteCard: React.FC<{
                 onDelete();
               }}
               style={styles.deleteButton}
-              hitSlop={10}>
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Delete note">
               <Feather name="trash-2" size={15} color={colors.danger} />
             </Pressable>
           </View>
@@ -182,6 +217,7 @@ const LoadingSkeleton: React.FC<{ delay: number }> = ({ delay }) => {
 
 // Empty state
 const EmptyState: React.FC = () => {
+  const router = useRouter();
   const opacity = useSharedValue(0);
 
   useEffect(() => {
@@ -200,8 +236,19 @@ const EmptyState: React.FC = () => {
         </View>
         <Text style={styles.emptyTitle}>No notes yet</Text>
         <Text style={styles.emptySubtitle}>
-          Start recording to see AI magic ✨
+          Record a lecture and let AI handle the rest
         </Text>
+        <Pressable
+          style={styles.emptyCta}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push('/record');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Record your first lecture">
+          <Feather name="mic" size={16} color="#FFFFFF" />
+          <Text style={styles.emptyCtaText}>Record your first lecture</Text>
+        </Pressable>
       </GlassCard>
     </Animated.View>
   );
@@ -237,6 +284,26 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.muted,
     fontSize: 16,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 15,
+    paddingVertical: 0,
   },
   loadingList: {
     gap: spacing.md,
@@ -325,5 +392,20 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     color: colors.muted,
     fontSize: 14,
+  },
+  emptyCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.xl,
+    marginTop: spacing.sm,
+  },
+  emptyCtaText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

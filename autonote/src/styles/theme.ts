@@ -27,7 +27,7 @@ export const colors = {
   // Text — high contrast dark
   text: '#1A1A1A',
   textSecondary: '#4A4A4A',
-  muted: '#9CA3AF',
+  muted: '#6B7280',
 
   // Status
   success: '#10B981',

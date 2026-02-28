@@ -38,6 +38,10 @@ export const createAudioPlayer = () => {
     await sound.setPositionAsync(ms);
   };
 
+  const setRate = async (rate: number) => {
+    await sound.setRateAsync(rate, true);
+  };
+
   const unload = async () => {
     await sound.unloadAsync();
     currentUri = null;
@@ -52,6 +56,7 @@ export const createAudioPlayer = () => {
     play,
     pause,
     seekTo,
+    setRate,
     unload,
     getStatus,
     sound,

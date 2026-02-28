@@ -15,9 +15,10 @@ type Props = {
   startMs: number;
   onPress: (ms: number) => void;
   index?: number;
+  isActive?: boolean;
 };
 
-export const TimelineSegment: React.FC<Props> = ({ text, startMs, onPress, index = 0 }) => {
+export const TimelineSegment: React.FC<Props> = ({ text, startMs, onPress, index = 0, isActive = false }) => {
   const scale = useSharedValue(0.95);
   const opacity = useSharedValue(0);
   const pressed = useSharedValue(0);
@@ -31,6 +32,17 @@ export const TimelineSegment: React.FC<Props> = ({ text, startMs, onPress, index
   const containerStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value * (1 - pressed.value * 0.02) }],
     opacity: opacity.value,
+  }));
+
+  const activeGlow = useSharedValue(0);
+
+  useEffect(() => {
+    activeGlow.value = withTiming(isActive ? 1 : 0, { duration: 200 });
+  }, [isActive, activeGlow]);
+
+  const contentActiveStyle = useAnimatedStyle(() => ({
+    borderColor: isActive ? 'rgba(217, 119, 6, 0.35)' : colors.border,
+    backgroundColor: isActive ? 'rgba(217, 119, 6, 0.04)' : colors.card,
   }));
 
   const handlePressIn = () => {
@@ -49,17 +61,17 @@ export const TimelineSegment: React.FC<Props> = ({ text, startMs, onPress, index
       <Animated.View style={[styles.segment, containerStyle]}>
         {/* Timeline dot & line */}
         <View style={styles.lineContainer}>
-          <View style={styles.dot} />
-          <View style={styles.line} />
+          <View style={[styles.dot, isActive && styles.dotActive]} />
+          <View style={[styles.line, isActive && styles.lineActive]} />
         </View>
 
         {/* Content */}
-        <View style={styles.content}>
+        <Animated.View style={[styles.content, contentActiveStyle]}>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{formatMillis(startMs)}</Text>
           </View>
           <Text style={styles.text}>{text}</Text>
-        </View>
+        </Animated.View>
       </Animated.View>
     </Pressable>
   );
@@ -81,12 +93,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     marginBottom: spacing.xs,
   },
+  dotActive: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   line: {
     flex: 1,
     width: 2,
     backgroundColor: colors.border,
     borderRadius: 1,
     minHeight: 30,
+  },
+  lineActive: {
+    backgroundColor: colors.accent,
+    width: 2.5,
   },
   content: {
     flex: 1,

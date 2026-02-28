@@ -10,6 +10,7 @@ export const useAudioPlayer = (uri?: string) => {
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [rate, setRateState] = useState(1);
 
   const onUpdate = useCallback((status: AVPlaybackStatusSuccess) => {
     setReady(status.isLoaded);
@@ -79,6 +80,23 @@ export const useAudioPlayer = (uri?: string) => {
     [ready, error],
   );
 
+  const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2] as const;
+
+  const setRate = useCallback(
+    async (newRate: number) => {
+      if (!ready || error) return;
+      await playerRef.current.setRate(newRate);
+      setRateState(newRate);
+    },
+    [ready, error],
+  );
+
+  const cycleRate = useCallback(async () => {
+    const idx = SPEED_OPTIONS.indexOf(rate as any);
+    const next = SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length];
+    await setRate(next);
+  }, [rate, setRate]);
+
   return {
     ready,
     isPlaying,
@@ -88,6 +106,9 @@ export const useAudioPlayer = (uri?: string) => {
     pause,
     toggle,
     seekTo,
+    rate,
+    setRate,
+    cycleRate,
     error,
   };
 };

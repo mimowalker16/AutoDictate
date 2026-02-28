@@ -9,6 +9,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { colors, animations } from '@/styles/theme';
 
 type Props = {
@@ -89,8 +90,21 @@ export const RecordButton: React.FC<Props> = ({ isRecording, onPress, level = 0 
     transform: [{ scale: isRecording ? orbScale.value : breathe.value }],
   }));
 
+  const handlePress = async () => {
+    if (isRecording) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+    onPress();
+  };
+
   return (
-    <Pressable onPress={onPress} style={styles.pressable}>
+    <Pressable
+      onPress={handlePress}
+      style={styles.pressable}
+      accessibilityRole="button"
+      accessibilityLabel={isRecording ? 'Stop recording' : 'Start recording'}>
       {/* Pulse rings — only visible when recording */}
       <PulseRing delay={0} isRecording={isRecording} />
       <PulseRing delay={700} isRecording={isRecording} />

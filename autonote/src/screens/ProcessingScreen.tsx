@@ -116,83 +116,83 @@ export default function ProcessingScreen() {
     [activeIndex],
   );
 
+  const process = React.useCallback(async () => {
+    if (!params.audioUri) return;
+    try {
+      setError(null);
+      setFailed(false);
+      setActiveIndex(0);
+      const defaultTitle = fallbackTitleFromFileName(params.fileName);
+      const audioExtension = extractExtension(params.fileName, params.audioUri);
+      let chosenTitle = defaultTitle;
+
+      if (Platform.OS === 'web' && params.audioUri?.startsWith('blob:')) {
+        throw new Error("Web recordings not supported");
+      }
+
+      const jobId = await uploadToSpeechmatics(params.audioUri!);
+      setActiveIndex(1);
+
+      const { transcriptText, timeline, transcriptJson } = await pollSpeechmaticsTranscript(
+        jobId,
+        (status) => setActiveIndex(status === 'done' ? 2 : 1),
+      );
+
+      setTranscript(transcriptText || '(Empty)');
+      setActiveIndex(2);
+
+      let summaryText = 'Transcript empty.';
+      let points: string[] = [];
+      let acts: string[] = [];
+      if (transcriptText && transcriptText.length > 0) {
+        try {
+          const g = await summarizeWithGemini(transcriptText, timeline);
+          summaryText = g.summary;
+          points = g.keyPoints ?? [];
+          acts = g.actionItems ?? [];
+          if (g.title?.trim()) chosenTitle = g.title.trim();
+        } catch {
+          summaryText = 'Summary unavailable.';
+        }
+      }
+      setSummary(summaryText);
+      setKeyPoints(points);
+
+      setActiveIndex(3);
+      const finalTitle = chosenTitle || defaultTitle;
+      const renamedUri = await renameRecordingWithTitle(params.audioUri!, finalTitle, audioExtension);
+      const note: Note = {
+        id: `note-${Date.now()}`,
+        title: finalTitle,
+        audioUri: renamedUri,
+        duration: Number(params.duration ?? 0),
+        date: new Date().toISOString(),
+        transcript: transcriptText,
+        summary: summaryText,
+        keyPoints: points,
+        actionItems: acts,
+        notes: '',
+        timeline,
+        timedKeywords: estimateKeywordTimes(points ?? [], timeline),
+      };
+      await addNote(note);
+
+      setActiveIndex(4);
+      router.replace({ pathname: '/note/[id]', params: { id: note.id } });
+    } catch (err) {
+      const msg = (err as Error).message || 'Network error';
+      setError(msg);
+      setFailed(true);
+    }
+  }, [addNote, params.audioUri, params.duration, params.fileName, router]);
+
   useEffect(() => {
     if (!params.audioUri) {
       router.replace('/record');
       return;
     }
-
-    const process = async () => {
-      try {
-        setError(null);
-        setFailed(false);
-        setActiveIndex(0);
-        const defaultTitle = fallbackTitleFromFileName(params.fileName);
-        const audioExtension = extractExtension(params.fileName, params.audioUri);
-        let chosenTitle = defaultTitle;
-
-        if (Platform.OS === 'web' && params.audioUri?.startsWith('blob:')) {
-          throw new Error("Web recordings not supported");
-        }
-
-        const jobId = await uploadToSpeechmatics(params.audioUri!);
-        setActiveIndex(1);
-
-        const { transcriptText, timeline, transcriptJson } = await pollSpeechmaticsTranscript(
-          jobId,
-          (status) => setActiveIndex(status === 'done' ? 2 : 1),
-        );
-
-        setTranscript(transcriptText || '(Empty)');
-        setActiveIndex(2);
-
-        let summaryText = 'Transcript empty.';
-        let points: string[] = [];
-        let acts: string[] = [];
-        if (transcriptText && transcriptText.length > 0) {
-          try {
-            const g = await summarizeWithGemini(transcriptText, timeline);
-            summaryText = g.summary;
-            points = g.keyPoints ?? [];
-            acts = g.actionItems ?? [];
-            if (g.title?.trim()) chosenTitle = g.title.trim();
-          } catch {
-            summaryText = 'Summary unavailable.';
-          }
-        }
-        setSummary(summaryText);
-        setKeyPoints(points);
-
-        setActiveIndex(3);
-        const finalTitle = chosenTitle || defaultTitle;
-        const renamedUri = await renameRecordingWithTitle(params.audioUri!, finalTitle, audioExtension);
-        const note: Note = {
-          id: `note-${Date.now()}`,
-          title: finalTitle,
-          audioUri: renamedUri,
-          duration: Number(params.duration ?? 0),
-          date: new Date().toISOString(),
-          transcript: transcriptText,
-          summary: summaryText,
-          keyPoints: points,
-          actionItems: acts,
-          notes: '',
-          timeline,
-          timedKeywords: estimateKeywordTimes(points ?? [], timeline),
-        };
-        await addNote(note);
-
-        setActiveIndex(4);
-        router.replace({ pathname: '/note/[id]', params: { id: note.id } });
-      } catch (err) {
-        const msg = (err as Error).message || 'Network error';
-        setError(msg);
-        setFailed(true);
-      }
-    };
-
     process();
-  }, [addNote, params.audioUri, params.duration, params.fileName, router]);
+  }, [params.audioUri, process, router]);
 
   const headerStyle = useAnimatedStyle(() => ({
     opacity: headerOpacity.value,
@@ -249,10 +249,16 @@ export default function ProcessingScreen() {
               <Text style={styles.errorText}>{error}</Text>
               <Text style={styles.hint}>Check your connection or API key.</Text>
               {failed && (
-                <Pressable style={styles.retryButton} onPress={() => router.replace('/record')}>
-                  <Feather name="arrow-left" size={15} color={colors.accent} />
-                  <Text style={styles.retryText}>Go back</Text>
-                </Pressable>
+                <View style={styles.retryRow}>
+                  <Pressable style={styles.retryButton} onPress={() => process()}>
+                    <Feather name="refresh-cw" size={15} color={colors.accent} />
+                    <Text style={styles.retryText}>Retry</Text>
+                  </Pressable>
+                  <Pressable style={styles.retryButtonSecondary} onPress={() => router.replace('/record')}>
+                    <Feather name="arrow-left" size={15} color={colors.muted} />
+                    <Text style={styles.retryTextSecondary}>Go back</Text>
+                  </Pressable>
+                </View>
               )}
             </>
           ) : (
@@ -375,10 +381,29 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: 'rgba(217, 119, 6, 0.15)',
-    marginTop: spacing.xs,
   },
   retryText: {
     color: colors.accent,
+    fontWeight: '600',
+  },
+  retryRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  retryButtonSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  retryTextSecondary: {
+    color: colors.muted,
     fontWeight: '600',
   },
   previewBlock: {

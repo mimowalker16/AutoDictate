@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Audio } from 'expo-av';
-import { RecordingResult, startRecording, stopRecording } from '@/audio/AudioRecorder';
+import { RecordingResult, startRecording, stopRecording, pauseRecording, resumeRecording } from '@/audio/AudioRecorder';
 
 export const useAudioRecorder = () => {
   const recordingRef = useRef<Audio.Recording | null>(null);
   const meterInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [level, setLevel] = useState(0);
 
@@ -40,6 +41,7 @@ export const useAudioRecorder = () => {
     try {
       recordingRef.current = await startRecording();
       setIsRecording(true);
+      setIsPaused(false);
       startMeter();
     } catch (err) {
       console.warn(err);
@@ -47,6 +49,36 @@ export const useAudioRecorder = () => {
       setIsRecording(false);
     }
   }, [startMeter]);
+
+  const pause = useCallback(async () => {
+    if (!recordingRef.current || isPaused) return;
+    try {
+      await pauseRecording(recordingRef.current);
+      setIsPaused(true);
+      stopMeter();
+    } catch (err) {
+      console.warn('Pause failed', err);
+    }
+  }, [isPaused, stopMeter]);
+
+  const resume = useCallback(async () => {
+    if (!recordingRef.current || !isPaused) return;
+    try {
+      await resumeRecording(recordingRef.current);
+      setIsPaused(false);
+      startMeter();
+    } catch (err) {
+      console.warn('Resume failed', err);
+    }
+  }, [isPaused, startMeter]);
+
+  const togglePause = useCallback(async () => {
+    if (isPaused) {
+      await resume();
+    } else {
+      await pause();
+    }
+  }, [isPaused, pause, resume]);
 
   const stop = useCallback(async (): Promise<RecordingResult | null> => {
     if (!recordingRef.current) return null;
@@ -58,6 +90,7 @@ export const useAudioRecorder = () => {
       return null;
     } finally {
       setIsRecording(false);
+      setIsPaused(false);
       recordingRef.current = null;
       stopMeter();
     }
@@ -72,9 +105,11 @@ export const useAudioRecorder = () => {
 
   return {
     isRecording,
+    isPaused,
     error,
     level,
     start: begin,
     stop,
+    togglePause,
   };
 };

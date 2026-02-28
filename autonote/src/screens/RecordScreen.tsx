@@ -11,6 +11,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { GradientScreen } from '@/components/GradientScreen';
 import { RecordButton } from '@/components/RecordButton';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
@@ -77,38 +79,81 @@ const WaveformBar: React.FC<{
 };
 
 // Timer
-const RecordingTimer: React.FC<{ isRecording: boolean; startTime: number | null }> = ({
+const RecordingTimer: React.FC<{ isRecording: boolean; startTime: number | null; isPaused?: boolean }> = ({
   isRecording,
   startTime,
+  isPaused = false,
 }) => {
   const [time, setTime] = React.useState('00:00');
+  const pausedElapsedRef = React.useRef(0);
+  const pauseStartRef = React.useRef<number | null>(null);
+  const totalPausedRef = React.useRef(0);
   const opacity = useSharedValue(0);
+  const dotOpacity = useSharedValue(1);
+
+  useEffect(() => {
+    if (isPaused) {
+      pauseStartRef.current = Date.now();
+      dotOpacity.value = withTiming(0.3, { duration: 300 });
+    } else if (pauseStartRef.current) {
+      totalPausedRef.current += Date.now() - pauseStartRef.current;
+      pauseStartRef.current = null;
+      dotOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.15, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        true,
+      );
+    }
+  }, [isPaused, dotOpacity]);
 
   useEffect(() => {
     opacity.value = withTiming(isRecording ? 1 : 0, { duration: 200 });
-    if (!isRecording) setTime('00:00');
-  }, [isRecording, opacity]);
+    if (isRecording && !isPaused) {
+      dotOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.15, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        true,
+      );
+    } else if (!isRecording) {
+      dotOpacity.value = withTiming(1, { duration: 200 });
+      setTime('00:00');
+      totalPausedRef.current = 0;
+      pauseStartRef.current = null;
+    }
+  }, [isRecording, opacity, dotOpacity]);
 
   useEffect(() => {
     if (!isRecording || !startTime) return;
     const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      if (isPaused) return;
+      const currentPaused = totalPausedRef.current + (pauseStartRef.current ? Date.now() - pauseStartRef.current : 0);
+      const elapsed = Math.floor((Date.now() - startTime - currentPaused) / 1000);
       const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
       const secs = (elapsed % 60).toString().padStart(2, '0');
       setTime(`${mins}:${secs}`);
     }, 100);
     return () => clearInterval(interval);
-  }, [isRecording, startTime]);
+  }, [isRecording, startTime, isPaused]);
 
   const timerStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
+  }));
+
+  const dotStyle = useAnimatedStyle(() => ({
+    opacity: dotOpacity.value,
   }));
 
   if (!isRecording) return null;
 
   return (
     <Animated.View style={[styles.timerContainer, timerStyle]}>
-      <View style={styles.timerDot} />
+      <Animated.View style={[styles.timerDot, dotStyle]} />
       <Text style={styles.timerText}>{time}</Text>
     </Animated.View>
   );
@@ -116,7 +161,7 @@ const RecordingTimer: React.FC<{ isRecording: boolean; startTime: number | null 
 
 export default function RecordScreen() {
   const router = useRouter();
-  const { start, stop, isRecording, error, level } = useAudioRecorder();
+  const { start, stop, isRecording, isPaused, error, level, togglePause } = useAudioRecorder();
   const [recordingStartTime, setRecordingStartTime] = React.useState<number | null>(null);
 
   // Entry animations
@@ -166,20 +211,37 @@ export default function RecordScreen() {
         {/* Center */}
         <View style={styles.center}>
           {/* Status */}
-          <View style={[styles.statusChip, isRecording && styles.statusChipRecording]}>
-            <Text style={[styles.statusText, isRecording && styles.statusTextRecording]}>
-              {isRecording ? 'Recording...' : 'Ready'}
+          <View style={[styles.statusChip, isRecording && !isPaused && styles.statusChipRecording, isPaused && styles.statusChipPaused]}>
+            <Text style={[styles.statusText, isRecording && !isPaused && styles.statusTextRecording, isPaused && styles.statusTextPaused]}>
+              {isPaused ? 'Paused' : isRecording ? 'Recording...' : 'Ready'}
             </Text>
           </View>
 
           {/* Waveform */}
-          <WaveformVisualizer isRecording={isRecording} level={level} />
+          <WaveformVisualizer isRecording={isRecording && !isPaused} level={level} />
 
           {/* Timer */}
-          <RecordingTimer isRecording={isRecording} startTime={recordingStartTime} />
+          <RecordingTimer isRecording={isRecording} startTime={recordingStartTime} isPaused={isPaused} />
 
           {/* Orb button */}
           <RecordButton isRecording={isRecording} onPress={handlePress} level={level} />
+
+          {/* Pause button */}
+          {isRecording && (
+            <Pressable
+              style={[styles.pauseButton, isPaused && styles.pauseButtonActive]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                togglePause();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={isPaused ? 'Resume recording' : 'Pause recording'}>
+              <Feather name={isPaused ? 'play' : 'pause'} size={20} color={isPaused ? colors.accent : colors.muted} />
+              <Text style={[styles.pauseLabel, isPaused && styles.pauseLabelActive]}>
+                {isPaused ? 'Resume' : 'Pause'}
+              </Text>
+            </Pressable>
+          )}
 
           {error && (
             <View style={styles.errorContainer}>
@@ -237,6 +299,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239, 68, 68, 0.08)',
     borderColor: 'rgba(239, 68, 68, 0.2)',
   },
+  statusChipPaused: {
+    backgroundColor: 'rgba(217, 119, 6, 0.08)',
+    borderColor: 'rgba(217, 119, 6, 0.2)',
+  },
   statusText: {
     color: colors.accent,
     fontWeight: '600',
@@ -244,6 +310,9 @@ const styles = StyleSheet.create({
   },
   statusTextRecording: {
     color: colors.recording,
+  },
+  statusTextPaused: {
+    color: colors.accent,
   },
   waveformContainer: {
     flexDirection: 'row',
@@ -309,5 +378,28 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: '500',
     fontSize: 13,
+  },
+  pauseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pauseButtonActive: {
+    backgroundColor: 'rgba(217, 119, 6, 0.08)',
+    borderColor: 'rgba(217, 119, 6, 0.2)',
+  },
+  pauseLabel: {
+    color: colors.muted,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pauseLabelActive: {
+    color: colors.accent,
   },
 });

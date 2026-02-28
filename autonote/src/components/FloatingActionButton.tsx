@@ -7,6 +7,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing, animations } from '@/styles/theme';
 
@@ -40,7 +41,10 @@ export const FloatingActionButton: React.FC<Props> = ({ label, onPress }) => {
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onPress();
+      }}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={[styles.button, { bottom: offsetBottom }]}>

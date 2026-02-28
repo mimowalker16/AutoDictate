@@ -3,6 +3,7 @@ import {
   Dimensions,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { GradientScreen } from '@/components/GradientScreen';
 import { GlassCard } from '@/components/GlassCard';
 import { TimelineSegment } from '@/components/TimelineSegment';
@@ -53,6 +55,9 @@ export default function NoteDetailScreen() {
   const [actionsText, setActionsText] = useState((note?.actionItems ?? []).join('\n'));
   const [notesText, setNotesText] = useState(note?.notes ?? '');
   const [activeTab, setActiveTab] = useState(0);
+  const [savedField, setSavedField] = useState<string | null>(null);
+
+  const segments = useMemo(() => note ? chunkTimeline(note.timeline) : [], [note?.timeline]);
 
   const pagerRef = useRef<ScrollView>(null);
   const indicatorX = useSharedValue(0);
@@ -85,6 +90,7 @@ export default function NoteDetailScreen() {
   }));
 
   const goToTab = (index: number) => {
+    Haptics.selectionAsync();
     setActiveTab(index);
     indicatorX.value = withSpring(index * TAB_WIDTH, animations.spring);
     pagerRef.current?.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
@@ -113,20 +119,60 @@ export default function NoteDetailScreen() {
     );
   }
 
-  const saveSummary = async () => updateNote(note.id, { summary });
-  const saveKeyPoints = async () =>
-    updateNote(note.id, { keyPoints: keyPointsText.split('\n').map((l) => l.trim()).filter(Boolean) });
-  const saveActions = async () =>
-    updateNote(note.id, { actionItems: actionsText.split('\n').map((l) => l.trim()).filter(Boolean) });
-  const saveNotes = async () => updateNote(note.id, { notes: notesText });
+  const showSaved = (field: string) => {
+    setSavedField(field);
+    setTimeout(() => setSavedField(null), 1200);
+  };
 
-  const segments = useMemo(() => chunkTimeline(note.timeline), [note.timeline]);
+  const saveSummary = async () => { await updateNote(note.id, { summary }); showSaved('summary'); };
+
+  const handleShare = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const parts: string[] = [];
+    parts.push(`📝 ${note.title || 'Audio Note'}`);
+    parts.push(`📅 ${new Date(note.date).toLocaleDateString()}`);
+    parts.push('');
+    if (note.summary) {
+      parts.push('📋 Summary');
+      parts.push(note.summary);
+      parts.push('');
+    }
+    if (note.keyPoints.length > 0) {
+      parts.push('⭐ Key Points');
+      note.keyPoints.forEach((p) => parts.push(`• ${p}`));
+      parts.push('');
+    }
+    if (note.actionItems.length > 0) {
+      parts.push('📚 Study Topics');
+      note.actionItems.forEach((a) => parts.push(`• ${a}`));
+      parts.push('');
+    }
+    parts.push('— Shared from AutoDictate');
+    try {
+      await Share.share({ message: parts.join('\n') });
+    } catch {
+      // user cancelled
+    }
+  };
+  const saveKeyPoints = async () => {
+    await updateNote(note.id, { keyPoints: keyPointsText.split('\n').map((l) => l.trim()).filter(Boolean) });
+    showSaved('keyPoints');
+  };
+  const saveActions = async () => {
+    await updateNote(note.id, { actionItems: actionsText.split('\n').map((l) => l.trim()).filter(Boolean) });
+    showSaved('actions');
+  };
+  const saveNotes = async () => { await updateNote(note.id, { notes: notesText }); showSaved('notes'); };
 
   return (
     <GradientScreen style={styles.screen}>
       {/* Header */}
       <Animated.View style={[styles.header, headerStyle]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go back">
           <Feather name="arrow-left" size={20} color={colors.text} />
         </Pressable>
         <View style={styles.headerContent}>
@@ -139,6 +185,13 @@ export default function NoteDetailScreen() {
             <Text style={styles.metaText}>{new Date(note.date).toLocaleDateString()}</Text>
           </View>
         </View>
+        <Pressable
+          onPress={handleShare}
+          style={styles.shareButton}
+          accessibilityRole="button"
+          accessibilityLabel="Share note">
+          <Feather name="share" size={18} color={colors.accent} />
+        </Pressable>
       </Animated.View>
 
       {/* Tab Bar */}
@@ -146,7 +199,14 @@ export default function NoteDetailScreen() {
         {TABS.map((tab, i) => {
           const isActive = activeTab === i;
           return (
-            <Pressable key={tab.key} style={styles.tabItem} onPress={() => goToTab(i)}>
+            <Pressable
+              key={tab.key}
+              style={styles.tabItem}
+              onPress={() => goToTab(i)}
+              hitSlop={{ top: 8, bottom: 8 }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={tab.label}>
               <Feather
                 name={tab.icon as any}
                 size={17}
@@ -181,8 +241,13 @@ export default function NoteDetailScreen() {
             <View style={styles.playerRow}>
               <Pressable
                 style={[styles.playButton, playbackError && styles.playButtonDisabled]}
-                onPress={player.toggle}
-                disabled={!!playbackError}>
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  player.toggle();
+                }}
+                disabled={!!playbackError}
+                accessibilityRole="button"
+                accessibilityLabel={player.isPlaying ? 'Pause audio' : 'Play audio'}>
                 <Feather
                   name={player.isPlaying ? 'pause' : 'play'}
                   size={22}
@@ -192,6 +257,17 @@ export default function NoteDetailScreen() {
               <View style={{ flex: 1 }}>
                 <AudioProgress position={player.position} duration={player.duration} onSeek={player.seekTo} />
               </View>
+              <Pressable
+                style={styles.speedButton}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  player.cycleRate();
+                }}
+                disabled={!!playbackError}
+                accessibilityRole="button"
+                accessibilityLabel={`Playback speed ${player.rate}x. Tap to change.`}>
+                <Text style={styles.speedText}>{player.rate}x</Text>
+              </Pressable>
             </View>
             {playbackError ? (
               <Text style={styles.errorText}>{playbackError}</Text>
@@ -208,7 +284,14 @@ export default function NoteDetailScreen() {
               </View>
               <View style={styles.keywordRow}>
                 {note.timedKeywords.map((kw, i) => (
-                  <KeywordBadge key={kw.keyword} keyword={kw} index={i} />
+                  <KeywordBadge
+                    key={kw.keyword}
+                    keyword={kw}
+                    index={i}
+                    onPress={(ms) => {
+                      if (!playbackError) player.seekTo(ms);
+                    }}
+                  />
                 ))}
               </View>
             </View>
@@ -221,6 +304,7 @@ export default function NoteDetailScreen() {
             <View style={styles.sectionHeader}>
               <Feather name="file-text" size={17} color={colors.accent} />
               <Text style={styles.sectionTitle}>Summary</Text>
+              {savedField === 'summary' && <SavedBadge />}
             </View>
             <TextInput
               multiline
@@ -240,6 +324,7 @@ export default function NoteDetailScreen() {
             <View style={styles.sectionHeader}>
               <Feather name="star" size={17} color={colors.accent} />
               <Text style={styles.sectionTitle}>Key points</Text>
+              {savedField === 'keyPoints' && <SavedBadge />}
             </View>
             <TextInput
               multiline
@@ -256,6 +341,7 @@ export default function NoteDetailScreen() {
             <View style={styles.sectionHeader}>
               <Feather name="book-open" size={17} color={colors.accent} />
               <Text style={styles.sectionTitle}>Study Topics</Text>
+              {savedField === 'actions' && <SavedBadge />}
             </View>
             <Text style={styles.sectionSubtitle}>
               Topics from this lecture worth studying deeper
@@ -278,6 +364,7 @@ export default function NoteDetailScreen() {
             <View style={styles.sectionHeader}>
               <Feather name="edit-3" size={17} color={colors.accent} />
               <Text style={styles.sectionTitle}>Personal notes</Text>
+              {savedField === 'notes' && <SavedBadge />}
             </View>
             <TextInput
               multiline
@@ -298,20 +385,26 @@ export default function NoteDetailScreen() {
               <Feather name="clock" size={17} color={colors.accent} />
               <Text style={styles.sectionTitle}>Timeline</Text>
             </View>
-            {segments.map((seg, idx) => (
-              <TimelineSegment
-                key={`${seg.start}-${idx}`}
-                text={seg.text}
-                startMs={seg.start * 1000}
-                index={idx}
-                onPress={(ms) => {
-                  if (!playbackError) {
-                    player.seekTo(ms);
-                    goToTab(0);
-                  }
-                }}
-              />
-            ))}
+            {segments.map((seg, idx) => {
+              const segStartMs = seg.start * 1000;
+              const nextStartMs = idx < segments.length - 1 ? segments[idx + 1].start * 1000 : Infinity;
+              const isActive = player.position >= segStartMs && player.position < nextStartMs;
+              return (
+                <TimelineSegment
+                  key={`${seg.start}-${idx}`}
+                  text={seg.text}
+                  startMs={segStartMs}
+                  index={idx}
+                  isActive={isActive}
+                  onPress={(ms) => {
+                    if (!playbackError) {
+                      player.seekTo(ms);
+                      goToTab(0);
+                    }
+                  }}
+                />
+              );
+            })}
           </GlassCard>
         </PageWrapper>
       </ScrollView>
@@ -365,8 +458,36 @@ const PageWrapper: React.FC<{ children: React.ReactNode; scrollable?: boolean }>
   );
 };
 
+// Saved badge — appears briefly after save
+const SavedBadge: React.FC = () => {
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 150 });
+    const timer = setTimeout(() => {
+      opacity.value = withTiming(0, { duration: 400 });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [opacity]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[styles.savedBadge, style]}>
+      <Feather name="check" size={11} color={colors.success} />
+      <Text style={styles.savedText}>Saved</Text>
+    </Animated.View>
+  );
+};
+
 // Keyword badge
-const KeywordBadge: React.FC<{ keyword: { keyword: string; time: number }; index: number }> = ({ keyword, index }) => {
+const KeywordBadge: React.FC<{
+  keyword: { keyword: string; time: number };
+  index: number;
+  onPress?: (ms: number) => void;
+}> = ({ keyword, index, onPress }) => {
   const scale = useSharedValue(0);
 
   useEffect(() => {
@@ -378,10 +499,18 @@ const KeywordBadge: React.FC<{ keyword: { keyword: string; time: number }; index
   }));
 
   return (
-    <Animated.View style={[styles.keyword, style]}>
-      <Text style={styles.keywordLabel}>{keyword.keyword}</Text>
-      <Text style={styles.keywordTime}>{formatMillis(keyword.time * 1000)}</Text>
-    </Animated.View>
+    <Pressable
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress?.(keyword.time * 1000);
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Seek to ${keyword.keyword}`}>
+      <Animated.View style={[styles.keyword, style]}>
+        <Text style={styles.keywordLabel}>{keyword.keyword}</Text>
+        <Text style={styles.keywordTime}>{formatMillis(keyword.time * 1000)}</Text>
+      </Animated.View>
+    </Pressable>
   );
 };
 
@@ -405,6 +534,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundDeep,
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  shareButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(217, 119, 6, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 119, 6, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -447,7 +587,7 @@ const styles = StyleSheet.create({
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     gap: 3,
   },
   tabLabel: {
@@ -527,6 +667,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
     opacity: 0.5,
   },
+  speedButton: {
+    minWidth: 44,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(217, 119, 6, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 119, 6, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  speedText: {
+    color: colors.accent,
+    fontWeight: '700',
+    fontSize: 13,
+    fontVariant: ['tabular-nums'],
+  },
   hint: {
     color: colors.muted,
     fontSize: 12,
@@ -549,6 +706,21 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '600',
     fontSize: 15,
+  },
+  savedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 'auto',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  savedText: {
+    color: colors.success,
+    fontSize: 11,
+    fontWeight: '600',
   },
   sectionSubtitle: {
     color: colors.muted,

@@ -32,6 +32,14 @@ export const startRecording = async () => {
   return recording;
 };
 
+export const pauseRecording = async (recording: Audio.Recording) => {
+  await recording.pauseAsync();
+};
+
+export const resumeRecording = async (recording: Audio.Recording) => {
+  await recording.startAsync();
+};
+
 export const stopRecording = async (recording: Audio.Recording): Promise<RecordingResult> => {
   await recording.stopAndUnloadAsync();
   const uri = recording.getURI();
