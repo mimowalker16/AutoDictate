@@ -1,18 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Platform, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
   withSpring,
   withTiming,
-  interpolate,
-  Extrapolation,
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, glass, radius, spacing, animations } from '@/styles/theme';
+import { colors, radius, spacing, animations, shadows } from '@/styles/theme';
 
 type Props = {
   children: React.ReactNode;
@@ -31,127 +25,79 @@ export const GlassCard: React.FC<Props> = ({
   glowing = false,
   delay = 0,
 }) => {
-  const scale = useSharedValue(0.95);
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
-  const glowOpacity = useSharedValue(0.3);
+  const scale = useSharedValue(animated ? 0.97 : 1);
+  const opacity = useSharedValue(animated ? 0 : 1);
+  const translateY = useSharedValue(animated ? 12 : 0);
   const pressed = useSharedValue(0);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       if (animated) {
         scale.value = withSpring(1, animations.spring);
         opacity.value = withTiming(1, { duration: animations.enter });
         translateY.value = withSpring(0, animations.spring);
-      } else {
-        scale.value = 1;
-        opacity.value = 1;
-        translateY.value = 0;
-      }
-
-      if (glowing) {
-        glowOpacity.value = withRepeat(
-          withSequence(
-            withTiming(0.6, { duration: 1500 }),
-            withTiming(0.3, { duration: 1500 }),
-          ),
-          -1,
-          true,
-        );
       }
     }, delay);
-
     return () => clearTimeout(timer);
-  }, [animated, delay, glowing, glowOpacity, opacity, scale, translateY]);
+  }, [animated, delay, opacity, scale, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
-      { scale: interpolate(pressed.value, [0, 1], [scale.value, 0.98]) },
+      { scale: onPress ? scale.value * (1 - pressed.value * 0.02) : scale.value },
       { translateY: translateY.value },
     ],
     opacity: opacity.value,
   }));
 
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
   const handlePressIn = () => {
-    if (onPress) {
-      pressed.value = withTiming(1, { duration: 100 });
-    }
+    if (onPress) pressed.value = withTiming(1, { duration: 80 });
   };
-
   const handlePressOut = () => {
-    if (onPress) {
-      pressed.value = withTiming(0, { duration: 150 });
-    }
+    if (onPress) pressed.value = withTiming(0, { duration: 120 });
   };
 
-  const content = (
-    <>
-      {/* Gold glow border */}
-      {glowing && (
-        <Animated.View style={[styles.glowBorder, glowStyle]}>
-          <LinearGradient
-            colors={[colors.gold, colors.goldLight, colors.gold]}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </Animated.View>
-      )}
-
-      <BlurView intensity={glass.blurIntensity} tint="dark" style={[styles.card, style]}>
-        {children}
-      </BlurView>
-    </>
+  const card = (
+    <Animated.View
+      style={[
+        styles.card,
+        glowing && styles.cardGlow,
+        animatedStyle,
+        style,
+      ]}>
+      {children}
+    </Animated.View>
   );
 
   if (onPress) {
     return (
       <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-        <Animated.View style={[styles.wrapper, glowing && styles.glowShadow, animatedStyle]}>
-          {content}
-        </Animated.View>
+        {card}
       </Pressable>
     );
   }
 
-  return (
-    <Animated.View style={[styles.wrapper, glowing && styles.glowShadow, animatedStyle]}>
-      {content}
-    </Animated.View>
-  );
+  return card;
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  glowShadow: Platform.select({
-    web: {
-      boxShadow: `0 0 30px ${colors.accentGlow}`,
-    },
-    default: {
-      shadowColor: colors.gold,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.4,
-      shadowRadius: 20,
-      elevation: 8,
-    },
-  }),
-  glowBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.lg,
-  },
   card: {
+    backgroundColor: colors.card,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: glass.borderColor,
+    borderColor: colors.border,
     padding: spacing.lg,
-    backgroundColor: glass.backgroundColor,
-    overflow: 'hidden',
+    ...Platform.select({
+      ios: shadows.md,
+      android: { elevation: 2 },
+      default: {},
+    }),
+  },
+  cardGlow: {
+    borderColor: 'rgba(217, 119, 6, 0.15)',
+    ...Platform.select({
+      ios: shadows.glow,
+      android: { elevation: 4 },
+      default: {},
+    }),
   },
 });

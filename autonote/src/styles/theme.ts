@@ -1,83 +1,72 @@
-// Study Dark - Professional Academic Theme 📚
+// Claude Mobile + ElevenLabs Inspired Theme
+// Warm, clean, minimal
 
 export const colors = {
-  // Backgrounds - Deep academic dark
-  background: '#0f1216',
-  backgroundAlt: '#1a1d23', 
-  backgroundDeep: '#0a0c10',
+  // Backgrounds — warm cream palette
+  background: '#F5F0EB',
+  backgroundAlt: '#FFFFFF',
+  backgroundDeep: '#EDE8E3',
 
-  // Professional academic accents
-  primary: '#4a9eff',
-  primaryLight: '#66b3ff',
-  primaryDark: '#2e7ad3',
-  secondary: '#7c3aed',
-  secondaryLight: '#9d5aff',
-  accent: '#06b6d4',
+  // Primary accent — warm amber
+  primary: '#D97706',
+  primaryLight: '#F59E0B',
+  primaryDark: '#B45309',
+  secondary: '#8B5CF6',
+  secondaryLight: '#A78BFA',
+  accent: '#D97706',
+  accentAlt: '#F59E0B',
+  accentGlow: 'rgba(217, 119, 6, 0.2)',
 
-  // Study-focused highlights
-  accent: '#06b6d4',
-  accentAlt: '#22d3ee',
-  accentGlow: 'rgba(34, 211, 238, 0.3)',
+  // Cards — clean white
+  card: '#FFFFFF',
+  cardStrong: '#FAFAF7',
+  cardHover: '#F5F5F0',
+  border: 'rgba(0, 0, 0, 0.08)',
+  borderGlow: 'rgba(217, 119, 6, 0.3)',
 
-  // Glass effects - clean and modern
-  card: 'rgba(74, 158, 255, 0.08)',
-  cardStrong: 'rgba(74, 158, 255, 0.12)',
-  cardHover: 'rgba(74, 158, 255, 0.16)',
-  border: 'rgba(74, 158, 255, 0.15)',
-  borderGlow: 'rgba(74, 158, 255, 0.4)',
+  // Text — high contrast dark
+  text: '#1A1A1A',
+  textSecondary: '#4A4A4A',
+  muted: '#9CA3AF',
 
-  // Text - high contrast for readability
-  text: '#f8fafc',
-  textSecondary: '#e2e8f0',
-  muted: '#94a3b8',
+  // Status
+  success: '#10B981',
+  warning: '#F59E0B',
+  danger: '#EF4444',
 
-  // Status colors - academic friendly
-  success: '#10b981',
-  warning: '#f59e0b', 
-  danger: '#ef4444',
+  // Recording — red
+  recording: '#EF4444',
+  recordingGlow: 'rgba(239, 68, 68, 0.15)',
 
-  // Recording state - professional red
-  recording: '#dc2626',
-  recordingGlow: 'rgba(220, 38, 38, 0.3)',
-  
-  // Legacy color properties for compatibility
-  gold: '#4a9eff',
-  goldLight: '#66b3ff',
-  goldDark: '#2e7ad3', 
-  navy: '#1a1d23',
-  navyLight: '#2a2d33',
+  // Legacy aliases for backward compatibility
+  gold: '#D97706',
+  goldLight: '#F59E0B',
+  goldDark: '#B45309',
+  navy: '#1A1A1A',
+  navyLight: '#4A4A4A',
 };
 
 export const gradients = {
-  // Academic gradient backgrounds
-  screen: ['#0a0c10', '#0f1216', '#1a1d23'],
-  screenStudy: ['#0a0c10', '#1a1d23', '#2a2d33'],
-
-  // Primary gradients - cool academic blues
-  accent: ['#4a9eff', '#66b3ff'],
-  primary: ['#2e7ad3', '#4a9eff', '#66b3ff'],
-  primaryShine: ['#4a9eff', '#66b3ff', '#4a9eff'],
-
-  // Secondary academic gradients
-  secondary: ['#7c3aed', '#9d5aff'],
-  study: ['#1a1d23', '#2a2d33'],
-
-  // Aurora academic - blue and cyan blend
-  aurora: ['#0f1216', '#1a2332', '#0f1216'],
-  auroraBlue: ['rgba(74, 158, 255, 0.1)', 'rgba(26, 35, 50, 0.3)', 'rgba(74, 158, 255, 0.1)'],
-  auroraGold: ['rgba(74, 158, 255, 0.1)', 'rgba(26, 35, 50, 0.3)', 'rgba(74, 158, 255, 0.1)'],
-  
-  // Legacy gradient properties for compatibility  
-  gold: ['#2e7ad3', '#4a9eff', '#66b3ff'],
+  screen: ['#F5F0EB', '#F5F0EB', '#F5F0EB'],
+  screenStudy: ['#F5F0EB', '#EDE8E3', '#F5F0EB'],
+  accent: ['#D97706', '#F59E0B'],
+  primary: ['#B45309', '#D97706', '#F59E0B'],
+  primaryShine: ['#D97706', '#F59E0B', '#D97706'],
+  secondary: ['#7C3AED', '#A78BFA'],
+  study: ['#F5F0EB', '#EDE8E3'],
+  aurora: ['#F5F0EB', '#F5F0EB', '#F5F0EB'],
+  auroraBlue: ['rgba(217, 119, 6, 0.05)', 'rgba(217, 119, 6, 0.02)', 'rgba(217, 119, 6, 0.05)'],
+  auroraGold: ['rgba(217, 119, 6, 0.05)', 'rgba(217, 119, 6, 0.02)', 'rgba(217, 119, 6, 0.05)'],
+  gold: ['#B45309', '#D97706', '#F59E0B'],
 } as const;
 
 export const glass = {
-  backgroundColor: 'rgba(74, 158, 255, 0.06)',
-  backgroundColorStrong: 'rgba(74, 158, 255, 0.12)',
-  borderColor: 'rgba(74, 158, 255, 0.15)',
-  borderColorActive: 'rgba(74, 158, 255, 0.4)',
-  shadowColor: '#4a9eff',
-  blurIntensity: 60,
+  backgroundColor: '#FFFFFF',
+  backgroundColorStrong: '#FAFAF7',
+  borderColor: 'rgba(0, 0, 0, 0.08)',
+  borderColorActive: 'rgba(217, 119, 6, 0.3)',
+  shadowColor: 'rgba(0, 0, 0, 0.08)',
+  blurIntensity: 0,
 };
 
 export const spacing = {
@@ -91,58 +80,56 @@ export const spacing = {
 
 export const radius = {
   sm: 10,
-  md: 16,
-  lg: 24,
-  xl: 32,
+  md: 14,
+  lg: 20,
+  xl: 28,
   full: 999,
 };
 
-// Animation timing
 export const animations = {
   fast: 150,
   normal: 300,
   slow: 500,
   enter: 400,
   spring: {
-    damping: 15,
-    stiffness: 150,
+    damping: 18,
+    stiffness: 140,
     mass: 1,
   },
   springBouncy: {
-    damping: 12,
-    stiffness: 180,
+    damping: 14,
+    stiffness: 160,
     mass: 0.8,
   },
 };
 
-// Shadows with royal gold glow
 export const shadows = {
   sm: {
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
   },
-  md: {
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 5,
   },
-  lg: {
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 8,
-  },
   glow: {
-    shadowColor: colors.gold,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
 };

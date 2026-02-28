@@ -5,10 +5,8 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-  interpolate,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients, radius, spacing, animations } from '@/styles/theme';
+import { colors, radius, spacing, animations } from '@/styles/theme';
 import { formatMillis } from '@/utils/time';
 
 type Props = {
@@ -21,7 +19,6 @@ export const AudioProgress: React.FC<Props> = ({ position, duration, onSeek }) =
   const [width, setWidth] = useState(1);
   const progressAnim = useSharedValue(0);
   const thumbScale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0.5);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     setWidth(event.nativeEvent.layout.width);
@@ -33,12 +30,10 @@ export const AudioProgress: React.FC<Props> = ({ position, duration, onSeek }) =
       const x = event.nativeEvent.locationX;
       const ratio = Math.min(1, Math.max(0, x / width));
       onSeek(ratio * duration);
-
-      // Thumb bounce
-      thumbScale.value = withSpring(1.3, animations.springBouncy);
+      thumbScale.value = withSpring(1.4, animations.springBouncy);
       setTimeout(() => {
         thumbScale.value = withSpring(1, animations.spring);
-      }, 150);
+      }, 120);
     },
     [duration, onSeek, thumbScale, width],
   );
@@ -54,75 +49,26 @@ export const AudioProgress: React.FC<Props> = ({ position, duration, onSeek }) =
 
   const thumbStyle = useAnimatedStyle(() => ({
     left: `${progressAnim.value * 100}%`,
-    transform: [{ scale: thumbScale.value }, { translateX: -8 }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progressAnim.value, [0, 1], [0.3, 0.7]),
+    transform: [{ scale: thumbScale.value }, { translateX: -7 }],
   }));
 
   return (
     <View style={styles.container}>
       <Pressable onPress={handlePress} onLayout={handleLayout} style={styles.barContainer}>
-        {/* Background track */}
+        {/* Track */}
         <View style={styles.track}>
-          {/* Waveform-style bars (decorative) */}
-          <View style={styles.waveContainer}>
-            {Array.from({ length: 30 }).map((_, i) => {
-              const height = Math.sin(i * 0.5) * 50 + 50;
-              return (
-                <View
-                  key={i}
-                  style={[
-                    styles.waveBar,
-                    { height: `${height}%` },
-                  ]}
-                />
-              );
-            })}
-          </View>
-
-          {/* Progress fill */}
-          <Animated.View style={[styles.fill, progressStyle]}>
-            <LinearGradient
-              colors={gradients.gold}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            />
-            {/* Overlay waveform for progress */}
-            <View style={styles.waveContainer}>
-              {Array.from({ length: 30 }).map((_, i) => {
-                const height = Math.sin(i * 0.5) * 50 + 50;
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.waveBarFilled,
-                      { height: `${height}%` },
-                    ]}
-                  />
-                );
-              })}
-            </View>
-          </Animated.View>
+          {/* Fill */}
+          <Animated.View style={[styles.fill, progressStyle]} />
         </View>
 
-        {/* Glowing thumb */}
-        <Animated.View style={[styles.thumb, thumbStyle]}>
-          <Animated.View style={[styles.thumbGlow, glowStyle]} />
-          <LinearGradient colors={gradients.gold} style={styles.thumbInner} />
-        </Animated.View>
+        {/* Thumb */}
+        <Animated.View style={[styles.thumb, thumbStyle]} />
       </Pressable>
 
-      {/* Time display */}
+      {/* Times */}
       <View style={styles.times}>
-        <View style={styles.timeContainer}>
-          <Text style={styles.time}>{formatMillis(position)}</Text>
-        </View>
-        <View style={styles.timeContainer}>
-          <Text style={styles.time}>{formatMillis(duration)}</Text>
-        </View>
+        <Text style={styles.time}>{formatMillis(position)}</Text>
+        <Text style={styles.time}>{formatMillis(duration)}</Text>
       </View>
     </View>
   );
@@ -130,83 +76,47 @@ export const AudioProgress: React.FC<Props> = ({ position, duration, onSeek }) =
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   barContainer: {
-    height: 32,
+    height: 28,
     justifyContent: 'center',
   },
   track: {
-    height: 24,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: radius.md,
+    height: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    borderRadius: 2,
     overflow: 'hidden',
-  },
-  waveContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: '100%',
-    gap: 2,
-    paddingHorizontal: 4,
-  },
-  waveBar: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 2,
-  },
-  waveBarFilled: {
-    flex: 1,
-    backgroundColor: 'rgba(5, 8, 16, 0.3)',
-    borderRadius: 2,
   },
   fill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    overflow: 'hidden',
-    borderRadius: radius.md,
+    height: '100%',
+    backgroundColor: colors.accent,
+    borderRadius: 2,
   },
   thumb: {
     position: 'absolute',
     top: '50%',
-    marginTop: -8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  thumbGlow: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.gold,
-  },
-  thumbInner: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    marginTop: -7,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.accent,
     borderWidth: 2,
-    borderColor: colors.backgroundDeep,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
   times: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  timeContainer: {
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs - 2,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   time: {
-    color: colors.gold,
+    color: colors.muted,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     fontVariant: ['tabular-nums'],
   },
 });

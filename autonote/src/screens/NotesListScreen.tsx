@@ -6,33 +6,28 @@ import Animated, {
   withDelay,
   withSpring,
   withTiming,
-  FadeIn,
-  SlideInLeft,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { GradientScreen } from '@/components/GradientScreen';
 import { GlassCard } from '@/components/GlassCard';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { useNotes } from '@/context/NotesContext';
-import { colors, gradients, radius, spacing, animations } from '@/styles/theme';
+import { colors, radius, spacing, animations } from '@/styles/theme';
 import { formatDate, formatMillis } from '@/utils/time';
+import { withRepeat, withSequence } from 'react-native-reanimated';
 
 export default function NotesListScreen() {
   const router = useRouter();
   const { notes, ready, deleteNote } = useNotes();
 
-  // Header animations
   const headerOpacity = useSharedValue(0);
-  const headerY = useSharedValue(-20);
-  const counterScale = useSharedValue(0);
+  const headerY = useSharedValue(-15);
 
   useEffect(() => {
     headerOpacity.value = withTiming(1, { duration: 400 });
     headerY.value = withSpring(0, animations.spring);
-    counterScale.value = withDelay(200, withSpring(1, animations.springBouncy));
-  }, [counterScale, headerOpacity, headerY]);
+  }, [headerOpacity, headerY]);
 
   const data = useMemo(
     () =>
@@ -44,10 +39,10 @@ export default function NotesListScreen() {
   );
 
   const confirmDelete = (id: string) => {
-    Alert.alert('Notu sil? / Delete note?', 'Bu işlem geri alınamaz / This action is permanent.', [
-      { text: 'İptal / Cancel', style: 'cancel' },
+    Alert.alert('Delete note?', 'This action is permanent.', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Sil / Delete',
+        text: 'Delete',
         style: 'destructive',
         onPress: () => deleteNote(id),
       },
@@ -59,38 +54,24 @@ export default function NotesListScreen() {
     transform: [{ translateY: headerY.value }],
   }));
 
-  const counterStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: counterScale.value }],
-  }));
-
   return (
     <GradientScreen>
       {/* Header */}
       <Animated.View style={[styles.header, headerStyle]}>
         <View style={styles.titleRow}>
-          <View style={styles.brandContainer}>
-            <Text style={styles.crown}>👑</Text>
-            <View>
-              <LinearGradient colors={gradients.gold} style={styles.brandBadge}>
-                <Text style={styles.eyebrow}>AUTODICTATE</Text>
-              </LinearGradient>
-            </View>
+          <Text style={styles.appName}>AutoDictate</Text>
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{notes.length}</Text>
           </View>
-          <Animated.View style={[styles.pill, counterStyle]}>
-            <Text style={styles.pillText}>{notes.length} not / notes</Text>
-          </Animated.View>
         </View>
-        <Text style={styles.title}>Kayıtların / Your Recordings</Text>
-        <Text style={styles.subtitle}>
-          Dinle, zaman çizgisini incele, AI özet paylaş / Listen, explore timeline, share AI summary.
-        </Text>
+        <Text style={styles.subtitle}>Your recordings</Text>
       </Animated.View>
 
       {/* Content */}
       {!ready ? (
         <View style={styles.loadingList}>
           {[0, 1, 2].map((key) => (
-            <LoadingSkeleton key={key} delay={key * 100} />
+            <LoadingSkeleton key={key} delay={key * 80} />
           ))}
         </View>
       ) : data.length === 0 ? (
@@ -112,32 +93,30 @@ export default function NotesListScreen() {
         />
       )}
 
-      <FloatingActionButton label="Yeni kayıt / New recording" onPress={() => router.push('/record')} />
+      <FloatingActionButton label="New recording" onPress={() => router.push('/record')} />
     </GradientScreen>
   );
 }
 
-// Note card with staggered animation
+// Note card
 const NoteCard: React.FC<{
   item: any;
   index: number;
   onPress: () => void;
   onDelete: () => void;
 }> = ({ item, index, onPress, onDelete }) => {
-  const scale = useSharedValue(0.95);
   const opacity = useSharedValue(0);
-  const translateX = useSharedValue(-20);
+  const translateY = useSharedValue(10);
 
   useEffect(() => {
-    const delay = Math.min(index * 80, 400);
-    scale.value = withDelay(delay, withSpring(1, animations.spring));
+    const delay = Math.min(index * 60, 300);
     opacity.value = withDelay(delay, withTiming(1, { duration: 300 }));
-    translateX.value = withDelay(delay, withSpring(0, animations.spring));
-  }, [index, opacity, scale, translateX]);
+    translateY.value = withDelay(delay, withSpring(0, animations.spring));
+  }, [index, opacity, translateY]);
 
   const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: translateX.value }],
     opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
   }));
 
   return (
@@ -147,11 +126,11 @@ const NoteCard: React.FC<{
           <View style={styles.itemHeader}>
             <View style={styles.itemTitleRow}>
               <View style={styles.itemIcon}>
-                <Feather name="mic" size={16} color={colors.gold} />
+                <Feather name="mic" size={15} color={colors.accent} />
               </View>
               <View style={styles.itemTitleContainer}>
                 <Text style={styles.itemTitle} numberOfLines={1}>
-                  {item.title || 'Note audio'}
+                  {item.title || 'Audio note'}
                 </Text>
                 <Text style={styles.duration}>{formatMillis(item.duration)}</Text>
               </View>
@@ -163,7 +142,7 @@ const NoteCard: React.FC<{
               }}
               style={styles.deleteButton}
               hitSlop={10}>
-              <Feather name="trash-2" size={16} color={colors.danger} />
+              <Feather name="trash-2" size={15} color={colors.danger} />
             </Pressable>
           </View>
           <Text style={styles.date}>{formatDate(item.date)}</Text>
@@ -176,7 +155,7 @@ const NoteCard: React.FC<{
   );
 };
 
-// Loading skeleton with shimmer
+// Loading skeleton
 const LoadingSkeleton: React.FC<{ delay: number }> = ({ delay }) => {
   const opacity = useSharedValue(0.3);
 
@@ -185,7 +164,7 @@ const LoadingSkeleton: React.FC<{ delay: number }> = ({ delay }) => {
       delay,
       withRepeat(
         withSequence(
-          withTiming(0.7, { duration: 800 }),
+          withTiming(0.6, { duration: 800 }),
           withTiming(0.3, { duration: 800 }),
         ),
         -1,
@@ -201,32 +180,27 @@ const LoadingSkeleton: React.FC<{ delay: number }> = ({ delay }) => {
   return <Animated.View style={[styles.loadingCard, style]} />;
 };
 
-import { withRepeat, withSequence } from 'react-native-reanimated';
-
 // Empty state
 const EmptyState: React.FC = () => {
-  const scale = useSharedValue(0.9);
   const opacity = useSharedValue(0);
 
   useEffect(() => {
-    scale.value = withSpring(1, animations.spring);
     opacity.value = withTiming(1, { duration: 400 });
-  }, [opacity, scale]);
+  }, [opacity]);
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
     opacity: opacity.value,
   }));
 
   return (
     <Animated.View style={style}>
-      <GlassCard style={styles.empty} glowing>
+      <GlassCard style={styles.empty}>
         <View style={styles.emptyIcon}>
-          <Text style={styles.emptyEmoji}>🎙️</Text>
+          <Feather name="mic" size={28} color={colors.accent} />
         </View>
-        <Text style={styles.emptyTitle}>Henüz not yok / No notes yet</Text>
-        <Text style={styles.muted}>
-          AI sihirini görmek için kayıt başlat ✨ / Start recording to see AI magic ✨
+        <Text style={styles.emptyTitle}>No notes yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Start recording to see AI magic ✨
         </Text>
       </GlassCard>
     </Animated.View>
@@ -235,7 +209,7 @@ const EmptyState: React.FC = () => {
 
 const styles = StyleSheet.create({
   header: {
-    gap: spacing.sm,
+    gap: spacing.xs,
     marginBottom: spacing.lg,
   },
   titleRow: {
@@ -243,63 +217,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  brandContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  crown: {
-    fontSize: 22,
-  },
-  brandBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  eyebrow: {
-    color: colors.backgroundDeep,
-    fontWeight: '800',
-    letterSpacing: 2,
-    fontSize: 11,
-  },
-  pill: {
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  pillText: {
-    color: colors.gold,
-    fontWeight: '700',
-    fontSize: 12,
-    letterSpacing: 0.3,
-  },
-  title: {
+  appName: {
     color: colors.text,
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.5,
+  },
+  countBadge: {
+    backgroundColor: 'rgba(217, 119, 6, 0.1)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+  },
+  countText: {
+    color: colors.accent,
+    fontWeight: '700',
+    fontSize: 13,
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  muted: {
-    color: colors.muted,
-    fontSize: 14,
+    fontSize: 16,
   },
   loadingList: {
     gap: spacing.md,
   },
   loadingCard: {
-    height: 100,
+    height: 90,
     borderRadius: radius.lg,
-    backgroundColor: 'rgba(212, 175, 55, 0.08)',
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.backgroundDeep,
   },
   list: {
     gap: spacing.md,
@@ -321,7 +266,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    backgroundColor: 'rgba(217, 119, 6, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -330,12 +275,12 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     color: colors.text,
-    fontWeight: '700',
+    fontWeight: '600',
     fontSize: 16,
   },
   duration: {
-    color: colors.gold,
-    fontWeight: '700',
+    color: colors.accent,
+    fontWeight: '600',
     fontSize: 12,
   },
   date: {
@@ -344,12 +289,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   deleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(239, 68, 68, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: 'rgba(239, 68, 68, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -364,20 +309,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxl,
   },
   emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(217, 119, 6, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  emptyEmoji: {
-    fontSize: 28,
+    marginBottom: spacing.xs,
   },
   emptyTitle: {
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 20,
+    fontWeight: '600',
+    fontSize: 18,
+  },
+  emptySubtitle: {
+    color: colors.muted,
+    fontSize: 14,
   },
 });

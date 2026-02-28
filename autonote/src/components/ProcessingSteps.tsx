@@ -10,8 +10,7 @@ import Animated, {
   withRepeat,
 } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients, radius, spacing, animations } from '@/styles/theme';
+import { colors, radius, spacing, animations } from '@/styles/theme';
 
 type Step = {
   label: string;
@@ -28,110 +27,74 @@ const StepItem: React.FC<{ step: Step; index: number; total: number }> = ({
   index,
   total,
 }) => {
-  const scale = useSharedValue(0.8);
+  const scale = useSharedValue(0.9);
   const opacity = useSharedValue(0);
-  const translateX = useSharedValue(-20);
-  const checkScale = useSharedValue(0);
-  const pulseOpacity = useSharedValue(0);
-  const progressWidth = useSharedValue(0);
+  const pulseOpacity = useSharedValue(0.4);
 
   useEffect(() => {
-    // Staggered entrance
-    const delay = index * 100;
+    const delay = index * 80;
     scale.value = withDelay(delay, withSpring(1, animations.spring));
     opacity.value = withDelay(delay, withTiming(1, { duration: 300 }));
-    translateX.value = withDelay(delay, withSpring(0, animations.spring));
 
-    if (step.done) {
-      checkScale.value = withSpring(1, animations.springBouncy);
-      progressWidth.value = withTiming(100, { duration: 300 });
-    } else if (step.active) {
+    if (step.active) {
       pulseOpacity.value = withRepeat(
         withSequence(
-          withTiming(0.8, { duration: 800 }),
-          withTiming(0.3, { duration: 800 }),
+          withTiming(1, { duration: 600 }),
+          withTiming(0.4, { duration: 600 }),
         ),
         -1,
         true,
       );
-      progressWidth.value = withRepeat(
-        withSequence(
-          withTiming(70, { duration: 1000 }),
-          withTiming(30, { duration: 1000 }),
-        ),
-        -1,
-        true,
-      );
-    } else {
-      progressWidth.value = 0;
     }
-  }, [checkScale, index, opacity, progressWidth, pulseOpacity, scale, step.active, step.done, translateX]);
+  }, [index, opacity, pulseOpacity, scale, step.active]);
 
   const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: translateX.value }],
+    transform: [{ scale: scale.value }],
     opacity: opacity.value,
   }));
 
-  const checkStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-  }));
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    opacity: pulseOpacity.value,
-  }));
-
-  const progressStyle = useAnimatedStyle(() => ({
-    width: `${progressWidth.value}%`,
+  const dotPulseStyle = useAnimatedStyle(() => ({
+    opacity: step.active ? pulseOpacity.value : 1,
   }));
 
   return (
-    <Animated.View style={[styles.step, containerStyle]}>
-      {/* Connecting line */}
-      {index < total - 1 && (
-        <View style={styles.connector}>
-          <View style={[styles.connectorLine, step.done && styles.connectorDone]} />
-        </View>
-      )}
-
-      <View style={styles.stepContent}>
-        {/* Status indicator */}
-        <View style={[styles.indicator, step.done && styles.indicatorDone, step.active && styles.indicatorActive]}>
-          {step.done ? (
-            <Animated.View style={checkStyle}>
-              <Feather name="check" size={14} color={colors.backgroundDeep} />
-            </Animated.View>
-          ) : step.active ? (
-            <Animated.View style={[styles.pulse, pulseStyle]}>
-              <LinearGradient colors={gradients.gold} style={StyleSheet.absoluteFill} />
-            </Animated.View>
-          ) : (
-            <View style={styles.dot} />
+    <Animated.View style={containerStyle}>
+      <View style={styles.stepRow}>
+        {/* Indicator */}
+        <View style={styles.indicatorCol}>
+          <View
+            style={[
+              styles.dot,
+              step.done && styles.dotDone,
+              step.active && styles.dotActive,
+            ]}>
+            {step.done ? (
+              <Feather name="check" size={12} color="#FFFFFF" />
+            ) : step.active ? (
+              <Animated.View style={[styles.activeDot, dotPulseStyle]} />
+            ) : (
+              <View style={styles.inactiveDot} />
+            )}
+          </View>
+          {index < total - 1 && (
+            <View style={[styles.line, step.done && styles.lineDone]} />
           )}
         </View>
 
-        {/* Step info */}
-        <View style={styles.stepInfo}>
-          <Text style={[styles.label, step.done && styles.labelDone, step.active && styles.labelActive]}>
-            {step.label}
-          </Text>
-          <View style={styles.progressBar}>
-            <Animated.View style={[styles.progressFill, progressStyle]}>
-              <LinearGradient
-                colors={step.done ? [colors.success, colors.success] : gradients.gold}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              />
-            </Animated.View>
-          </View>
-        </View>
+        {/* Label */}
+        <Text
+          style={[
+            styles.label,
+            step.done && styles.labelDone,
+            step.active && styles.labelActive,
+          ]}>
+          {step.label}
+        </Text>
 
-        {/* Status badge */}
-        <View style={[styles.badge, step.done && styles.badgeDone, step.active && styles.badgeActive]}>
-          <Text style={styles.badgeText}>
-            {step.done ? '✓' : step.active ? '...' : '○'}
-          </Text>
-        </View>
+        {/* Status */}
+        {step.done && (
+          <Text style={styles.statusDone}>Done</Text>
+        )}
       </View>
     </Animated.View>
   );
@@ -147,109 +110,79 @@ export const ProcessingSteps: React.FC<Props> = ({ steps }) => (
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.sm,
+    gap: 0,
   },
-  step: {
-    position: 'relative',
-  },
-  connector: {
-    position: 'absolute',
-    left: 15,
-    top: 40,
-    bottom: -spacing.sm,
-    width: 2,
-  },
-  connectorLine: {
-    flex: 1,
-    backgroundColor: colors.border,
-    borderRadius: 1,
-  },
-  connectorDone: {
-    backgroundColor: colors.success,
-  },
-  stepContent: {
+  stepRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(212, 175, 55, 0.05)',
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
   },
-  indicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.backgroundAlt,
+  indicatorCol: {
+    alignItems: 'center',
+    width: 28,
+    marginRight: spacing.md,
+  },
+  dot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.backgroundDeep,
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  indicatorDone: {
+  dotDone: {
     backgroundColor: colors.success,
     borderColor: colors.success,
   },
-  indicatorActive: {
-    borderColor: colors.gold,
+  dotActive: {
+    borderColor: colors.accent,
+    backgroundColor: '#FFFFFF',
   },
-  pulse: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 16,
-  },
-  dot: {
+  activeDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.muted,
+    backgroundColor: colors.accent,
   },
-  stepInfo: {
-    flex: 1,
-    gap: spacing.xs,
+  inactiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.muted,
+    opacity: 0.5,
+  },
+  line: {
+    width: 2,
+    height: 20,
+    backgroundColor: colors.border,
+    borderRadius: 1,
+    marginTop: 4,
+  },
+  lineDone: {
+    backgroundColor: colors.success,
   },
   label: {
+    flex: 1,
     color: colors.muted,
-    fontWeight: '600',
+    fontWeight: '500',
     fontSize: 14,
+    lineHeight: 24,
   },
   labelDone: {
-    color: colors.success,
+    color: colors.text,
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
   },
   labelActive: {
-    color: colors.gold,
-    fontWeight: '700',
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  badgeDone: {
-    backgroundColor: 'rgba(74, 222, 128, 0.15)',
-    borderColor: colors.success,
-  },
-  badgeActive: {
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
-    borderColor: colors.gold,
-  },
-  badgeText: {
     color: colors.text,
+    fontWeight: '600',
+  },
+  statusDone: {
+    color: colors.success,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
+    lineHeight: 24,
   },
 });

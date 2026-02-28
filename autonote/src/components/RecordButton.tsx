@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,10 +8,8 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
-  interpolate,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients, radius, animations } from '@/styles/theme';
+import { colors, animations } from '@/styles/theme';
 
 type Props = {
   isRecording: boolean;
@@ -19,62 +17,23 @@ type Props = {
   level?: number;
 };
 
-// Particle component for burst effect
-const Particle: React.FC<{ delay: number; angle: number; isActive: boolean }> = ({
-  delay,
-  angle,
-  isActive,
-}) => {
-  const progress = useSharedValue(0);
-  const opacity = useSharedValue(0);
-
-  useEffect(() => {
-    if (isActive) {
-      setTimeout(() => {
-        progress.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
-        opacity.value = withSequence(
-          withTiming(1, { duration: 100 }),
-          withTiming(0, { duration: 500 }),
-        );
-      }, delay);
-    } else {
-      progress.value = 0;
-      opacity.value = 0;
-    }
-  }, [delay, isActive, opacity, progress]);
-
-  const style = useAnimatedStyle(() => {
-    const distance = interpolate(progress.value, [0, 1], [0, 80]);
-    const x = Math.cos(angle) * distance;
-    const y = Math.sin(angle) * distance;
-    const scale = interpolate(progress.value, [0, 0.5, 1], [0.5, 1.2, 0.3]);
-
-    return {
-      transform: [{ translateX: x }, { translateY: y }, { scale }],
-      opacity: opacity.value,
-    };
-  });
-
-  return <Animated.View style={[styles.particle, style]} />;
-};
-
-// Sound wave ring
-const WaveRing: React.FC<{ delay: number; isRecording: boolean }> = ({ delay, isRecording }) => {
+// Pulsing ring that expands outward during recording
+const PulseRing: React.FC<{ delay: number; isRecording: boolean }> = ({ delay, isRecording }) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 
   useEffect(() => {
     if (isRecording) {
       const start = () => {
-        scale.value = 1;
-        opacity.value = 0.6;
+        scale.value = 0.9;
+        opacity.value = 0.4;
         scale.value = withRepeat(
-          withTiming(2.5, { duration: 1500, easing: Easing.out(Easing.ease) }),
+          withTiming(2, { duration: 2000, easing: Easing.out(Easing.ease) }),
           -1,
           false,
         );
         opacity.value = withRepeat(
-          withTiming(0, { duration: 1500, easing: Easing.out(Easing.ease) }),
+          withTiming(0, { duration: 2000, easing: Easing.out(Easing.ease) }),
           -1,
           false,
         );
@@ -82,8 +41,8 @@ const WaveRing: React.FC<{ delay: number; isRecording: boolean }> = ({ delay, is
       const timer = setTimeout(start, delay);
       return () => clearTimeout(timer);
     } else {
-      scale.value = 1;
-      opacity.value = 0;
+      scale.value = withTiming(1, { duration: 300 });
+      opacity.value = withTiming(0, { duration: 300 });
     }
   }, [delay, isRecording, opacity, scale]);
 
@@ -92,136 +51,70 @@ const WaveRing: React.FC<{ delay: number; isRecording: boolean }> = ({ delay, is
     opacity: opacity.value,
   }));
 
-  return <Animated.View style={[styles.waveRing, style]} />;
+  return <Animated.View style={[styles.pulseRing, style]} />;
 };
 
 export const RecordButton: React.FC<Props> = ({ isRecording, onPress, level = 0 }) => {
-  const pulse = useSharedValue(1);
-  const reactive = useSharedValue(1);
-  const morphX = useSharedValue(1);
-  const morphY = useSharedValue(1);
-  const rotation = useSharedValue(0);
-  const innerGlow = useSharedValue(0.3);
-  const showParticles = useSharedValue(false);
+  const orbScale = useSharedValue(1);
+  const breathe = useSharedValue(1);
 
-  // Idle breathing animation
+  // Idle breathing
   useEffect(() => {
     if (!isRecording) {
-      pulse.value = withRepeat(
+      breathe.value = withRepeat(
         withSequence(
-          withTiming(1.03, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.97, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1.04, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.96, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         true,
       );
-      rotation.value = withRepeat(
-        withTiming(360, { duration: 20000, easing: Easing.linear }),
-        -1,
-        false,
-      );
-      innerGlow.value = withRepeat(
-        withSequence(
-          withTiming(0.6, { duration: 1500 }),
-          withTiming(0.3, { duration: 1500 }),
-        ),
-        -1,
-        true,
-      );
+    } else {
+      breathe.value = withTiming(1, { duration: 200 });
     }
-  }, [innerGlow, isRecording, pulse, rotation]);
+  }, [breathe, isRecording]);
 
-  // Recording reactive animation
+  // Audio-reactive scale
   useEffect(() => {
-    if (!isRecording) {
-      reactive.value = withSpring(1, animations.spring);
-      morphX.value = withSpring(1, animations.spring);
-      morphY.value = withSpring(1, animations.spring);
-      return;
+    if (isRecording) {
+      const clamped = Math.min(1, Math.max(0, level));
+      const target = 0.95 + clamped * 0.2;
+      orbScale.value = withTiming(target, { duration: 80 });
+    } else {
+      orbScale.value = withSpring(1, animations.spring);
     }
-
-    const clamped = Math.min(1, Math.max(0, level));
-    const targetScale = 0.95 + clamped * 0.25;
-    const targetX = 1 + clamped * 0.15;
-    const targetY = 1 - clamped * 0.1;
-
-    reactive.value = withTiming(targetScale, { duration: 80 });
-    morphX.value = withTiming(targetX, { duration: 80 });
-    morphY.value = withTiming(Math.max(0.85, targetY), { duration: 80 });
-  }, [isRecording, level, morphX, morphY, reactive]);
+  }, [isRecording, level, orbScale]);
 
   const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: isRecording ? reactive.value : pulse.value }],
-  }));
-
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
-  }));
-
-  const blobStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: morphX.value }, { scaleY: morphY.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: innerGlow.value,
-  }));
-
-  const handlePress = () => {
-    showParticles.value = true;
-    setTimeout(() => {
-      showParticles.value = false;
-    }, 700);
-    onPress();
-  };
-
-  const particles = Array.from({ length: 12 }, (_, i) => ({
-    angle: (i * Math.PI * 2) / 12,
-    delay: i * 30,
+    transform: [{ scale: isRecording ? orbScale.value : breathe.value }],
   }));
 
   return (
-    <Pressable onPress={handlePress} style={styles.pressable}>
-      {/* Wave rings when recording */}
-      <WaveRing delay={0} isRecording={isRecording} />
-      <WaveRing delay={500} isRecording={isRecording} />
-      <WaveRing delay={1000} isRecording={isRecording} />
+    <Pressable onPress={onPress} style={styles.pressable}>
+      {/* Pulse rings — only visible when recording */}
+      <PulseRing delay={0} isRecording={isRecording} />
+      <PulseRing delay={700} isRecording={isRecording} />
 
       <Animated.View style={[styles.container, containerStyle]}>
-        {/* Outer rotating gradient ring */}
-        <Animated.View style={[styles.outerRingWrapper, ringStyle]}>
-          <LinearGradient
-            colors={isRecording ? [colors.recording, colors.gold] : gradients.gold}
-            style={styles.outerRing}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </Animated.View>
-
-        {/* Inner morphing blob */}
-        <Animated.View
-          style={[
-            styles.inner,
-            isRecording && styles.innerRecording,
-            blobStyle,
-          ]}>
-          {/* Inner glow */}
-          <Animated.View style={[styles.innerGlow, glowStyle]} />
-          <Text style={styles.label}>{isRecording ? '■ Stop' : '● Record'}</Text>
-        </Animated.View>
-
-        {/* Particles burst */}
-        {particles.map((p, i) => (
-          <Particle
-            key={i}
-            angle={p.angle}
-            delay={p.delay}
-            isActive={showParticles.value}
-          />
-        ))}
+        {/* Outer ring */}
+        <View style={[styles.outerRing, isRecording && styles.outerRingRecording]}>
+          {/* Inner orb */}
+          <View style={[styles.innerOrb, isRecording && styles.innerOrbRecording]}>
+            <Text style={[styles.label, isRecording && styles.labelRecording]}>
+              {isRecording ? '■' : '●'}
+            </Text>
+            <Text style={[styles.sublabel, isRecording && styles.sublabelRecording]}>
+              {isRecording ? 'Stop' : 'Record'}
+            </Text>
+          </View>
+        </View>
       </Animated.View>
     </Pressable>
   );
 };
+
+const ORB_SIZE = 140;
+const INNER_SIZE = ORB_SIZE - 12;
 
 const styles = StyleSheet.create({
   pressable: {
@@ -232,71 +125,57 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: `0 15px 40px ${colors.accentGlow}`,
-      },
-      default: {
-        shadowColor: colors.gold,
-        shadowOffset: { width: 0, height: 15 },
-        shadowOpacity: 0.5,
-        shadowRadius: 30,
-      },
-    }),
-  },
-  outerRingWrapper: {
-    padding: 6,
-    borderRadius: 999,
   },
   outerRing: {
-    width: 180,
-    height: 180,
-    borderRadius: 999,
-    padding: 6,
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    borderRadius: ORB_SIZE / 2,
+    backgroundColor: 'rgba(217, 119, 6, 0.08)',
+    borderWidth: 2.5,
+    borderColor: 'rgba(217, 119, 6, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inner: {
-    position: 'absolute',
-    height: 160,
-    width: 160,
-    borderRadius: 999,
-    backgroundColor: colors.backgroundAlt,
-    borderWidth: 2,
-    borderColor: colors.border,
+  outerRingRecording: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  innerOrb: {
+    width: INNER_SIZE,
+    height: INNER_SIZE,
+    borderRadius: INNER_SIZE / 2,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  innerRecording: {
-    backgroundColor: 'rgba(220, 38, 38, 0.15)',
-    borderColor: colors.recording,
-  },
-  innerGlow: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.gold,
-    borderRadius: 999,
+  innerOrbRecording: {
+    backgroundColor: colors.recording,
   },
   label: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '300',
+  },
+  labelRecording: {
+    fontSize: 22,
+  },
+  sublabel: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
+    fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
+    marginTop: -2,
   },
-  waveRing: {
+  sublabelRecording: {
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  pulseRing: {
     position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 999,
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    borderRadius: ORB_SIZE / 2,
     borderWidth: 2,
-    borderColor: colors.recording,
-  },
-  particle: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.gold,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
 });

@@ -16,7 +16,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { GradientScreen } from '@/components/GradientScreen';
 import { GlassCard } from '@/components/GlassCard';
@@ -24,18 +23,18 @@ import { TimelineSegment } from '@/components/TimelineSegment';
 import { AudioProgress } from '@/components/AudioProgress';
 import { useNotes } from '@/context/NotesContext';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
-import { colors, gradients, radius, spacing, animations } from '@/styles/theme';
+import { colors, radius, spacing, animations } from '@/styles/theme';
 import { chunkTimeline } from '@/utils/timeline';
 import { formatMillis } from '@/utils/time';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TABS = [
-  { key: 'player',   icon: 'headphones', label: 'Player'    },
-  { key: 'summary',  icon: 'file-text',  label: 'Özet'      },
-  { key: 'points',   icon: 'star',       label: 'Noktalar'  },
-  { key: 'notes',    icon: 'edit-3',     label: 'Notlar'    },
-  { key: 'timeline', icon: 'clock',      label: 'Timeline'  },
+  { key: 'player', icon: 'headphones', label: 'Player' },
+  { key: 'summary', icon: 'file-text', label: 'Summary' },
+  { key: 'points', icon: 'star', label: 'Points' },
+  { key: 'notes', icon: 'edit-3', label: 'Notes' },
+  { key: 'timeline', icon: 'clock', label: 'Timeline' },
 ] as const;
 
 export default function NoteDetailScreen() {
@@ -58,7 +57,7 @@ export default function NoteDetailScreen() {
 
   // Header animation
   const headerOpacity = useSharedValue(0);
-  const headerY = useSharedValue(-20);
+  const headerY = useSharedValue(-15);
   useEffect(() => {
     headerOpacity.value = withTiming(1, { duration: 400 });
     headerY.value = withSpring(0, animations.spring);
@@ -100,11 +99,11 @@ export default function NoteDetailScreen() {
     return (
       <GradientScreen>
         <View style={styles.notFound}>
-          <Text style={styles.notFoundEmoji}>🔍</Text>
-          <Text style={styles.error}>Not bulunamadı / Note not found</Text>
+          <Feather name="search" size={40} color={colors.muted} />
+          <Text style={styles.notFoundTitle}>Note not found</Text>
           <Pressable onPress={() => router.replace('/')} style={styles.backLink}>
-            <Feather name="arrow-left" size={18} color={colors.gold} />
-            <Text style={styles.link}>Geri / Back</Text>
+            <Feather name="arrow-left" size={16} color={colors.accent} />
+            <Text style={styles.link}>Back</Text>
           </Pressable>
         </View>
       </GradientScreen>
@@ -122,27 +121,24 @@ export default function NoteDetailScreen() {
 
   return (
     <GradientScreen style={styles.screen}>
-      {/* ── Persistent Header ── */}
+      {/* Header */}
       <Animated.View style={[styles.header, headerStyle]}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Feather name="arrow-left" size={20} color={colors.gold} />
+          <Feather name="arrow-left" size={20} color={colors.text} />
         </Pressable>
         <View style={styles.headerContent}>
-          <LinearGradient colors={gradients.gold} style={styles.eyebrowBadge}>
-            <Text style={styles.eyebrow}>RECORDED</Text>
-          </LinearGradient>
-          <Text style={styles.title} numberOfLines={2}>{note.title || 'Ses notu / Audio note'}</Text>
+          <Text style={styles.title} numberOfLines={2}>{note.title || 'Audio note'}</Text>
           <View style={styles.metaRow}>
-            <Feather name="clock" size={13} color={colors.muted} />
+            <Feather name="clock" size={12} color={colors.muted} />
             <Text style={styles.metaText}>{formatMillis(note.duration)}</Text>
             <View style={styles.metaDot} />
-            <Feather name="calendar" size={13} color={colors.muted} />
+            <Feather name="calendar" size={12} color={colors.muted} />
             <Text style={styles.metaText}>{new Date(note.date).toLocaleDateString()}</Text>
           </View>
         </View>
       </Animated.View>
 
-      {/* ── Tab Bar ── */}
+      {/* Tab Bar */}
       <View style={styles.tabBar}>
         {TABS.map((tab, i) => {
           const isActive = activeTab === i;
@@ -150,8 +146,8 @@ export default function NoteDetailScreen() {
             <Pressable key={tab.key} style={styles.tabItem} onPress={() => goToTab(i)}>
               <Feather
                 name={tab.icon as any}
-                size={18}
-                color={isActive ? colors.primary : colors.muted}
+                size={17}
+                color={isActive ? colors.accent : colors.muted}
               />
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                 {tab.label}
@@ -159,11 +155,10 @@ export default function NoteDetailScreen() {
             </Pressable>
           );
         })}
-        {/* Sliding indicator */}
         <Animated.View style={[styles.tabIndicator, { width: TAB_WIDTH }, indicatorStyle]} />
       </View>
 
-      {/* ── Swipeable Pages ── */}
+      {/* Pages */}
       <ScrollView
         ref={pagerRef}
         horizontal
@@ -173,27 +168,23 @@ export default function NoteDetailScreen() {
         style={styles.pager}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Page 0 — Player */}
+        {/* Player */}
         <PageWrapper>
           <GlassCard glowing>
             <View style={styles.playerHeader}>
-              <Feather name="headphones" size={20} color={colors.gold} />
-              <Text style={styles.sectionTitle}>Ses oynatıcı / Audio player</Text>
+              <Feather name="headphones" size={18} color={colors.accent} />
+              <Text style={styles.sectionTitle}>Audio player</Text>
             </View>
             <View style={styles.playerRow}>
               <Pressable
                 style={[styles.playButton, playbackError && styles.playButtonDisabled]}
                 onPress={player.toggle}
                 disabled={!!playbackError}>
-                <LinearGradient
-                  colors={playbackError ? [colors.muted, colors.muted] : gradients.gold}
-                  style={styles.playButtonGradient}>
-                  <Feather
-                    name={player.isPlaying ? 'pause' : 'play'}
-                    size={26}
-                    color={colors.backgroundDeep}
-                  />
-                </LinearGradient>
+                <Feather
+                  name={player.isPlaying ? 'pause' : 'play'}
+                  size={22}
+                  color="#FFFFFF"
+                />
               </Pressable>
               <View style={{ flex: 1 }}>
                 <AudioProgress position={player.position} duration={player.duration} onSeek={player.seekTo} />
@@ -202,16 +193,15 @@ export default function NoteDetailScreen() {
             {playbackError ? (
               <Text style={styles.errorText}>{playbackError}</Text>
             ) : (
-              <Text style={styles.hint}>Çubuğa dokunarak ileri/geri sar / Tap to seek</Text>
+              <Text style={styles.hint}>Tap the bar to seek</Text>
             )}
           </GlassCard>
 
-          {/* Keywords inside player page */}
           {note.timedKeywords.length > 0 && (
-            <View style={[styles.glassSection, { marginTop: spacing.lg }]}>
+            <View style={[styles.keywordsSection, { marginTop: spacing.lg }]}>
               <View style={styles.sectionHeader}>
-                <Feather name="tag" size={16} color={colors.gold} />
-                <Text style={styles.sectionTitle}>Anahtar kelimeler / Keywords</Text>
+                <Feather name="tag" size={15} color={colors.accent} />
+                <Text style={styles.sectionTitle}>Keywords</Text>
               </View>
               <View style={styles.keywordRow}>
                 {note.timedKeywords.map((kw, i) => (
@@ -222,85 +212,85 @@ export default function NoteDetailScreen() {
           )}
         </PageWrapper>
 
-        {/* Page 1 — Summary */}
+        {/* Summary */}
         <PageWrapper>
           <GlassCard>
             <View style={styles.sectionHeader}>
-              <Feather name="file-text" size={18} color={colors.gold} />
-              <Text style={styles.sectionTitle}>Özet / Summary</Text>
+              <Feather name="file-text" size={17} color={colors.accent} />
+              <Text style={styles.sectionTitle}>Summary</Text>
             </View>
             <TextInput
               multiline
               value={summary}
               onChangeText={setSummary}
               onBlur={saveSummary}
-              placeholder="Özeti düzenle / Edit summary..."
+              placeholder="Edit summary..."
               placeholderTextColor={colors.muted}
               style={styles.textArea}
             />
           </GlassCard>
         </PageWrapper>
 
-        {/* Page 2 — Key Points + Actions */}
+        {/* Points + Actions */}
         <PageWrapper scrollable>
-          <GlassCard style={styles.pageCard}>
+          <GlassCard>
             <View style={styles.sectionHeader}>
-              <Feather name="star" size={18} color={colors.gold} />
-              <Text style={styles.sectionTitle}>Anahtar noktalar / Key points</Text>
+              <Feather name="star" size={17} color={colors.accent} />
+              <Text style={styles.sectionTitle}>Key points</Text>
             </View>
             <TextInput
               multiline
               value={keyPointsText}
               onChangeText={setKeyPointsText}
               onBlur={saveKeyPoints}
-              placeholder="Her satıra bir nokta / One point per line"
+              placeholder="One point per line"
               placeholderTextColor={colors.muted}
               style={styles.textArea}
             />
           </GlassCard>
 
-          <GlassCard style={[styles.pageCard, { marginTop: spacing.lg }]}>
+          <GlassCard style={{ marginTop: spacing.lg }}>
             <View style={styles.sectionHeader}>
-              <Feather name="check-circle" size={18} color={colors.gold} />
-              <Text style={styles.sectionTitle}>Eylemler / Actions</Text>
+              <Feather name="check-circle" size={17} color={colors.accent} />
+              <Text style={styles.sectionTitle}>Actions</Text>
             </View>
             <TextInput
               multiline
               value={actionsText}
               onChangeText={setActionsText}
               onBlur={saveActions}
-              placeholder="Her satıra bir eylem / One action per line"
+              placeholder="One action per line"
               placeholderTextColor={colors.muted}
               style={styles.textArea}
             />
           </GlassCard>
         </PageWrapper>
 
-        {/* Page 3 — Personal Notes */}
+        {/* Notes */}
         <PageWrapper>
           <GlassCard>
             <View style={styles.sectionHeader}>
-              <Feather name="edit-3" size={18} color={colors.gold} />
-              <Text style={styles.sectionTitle}>Kişisel notlar / Personal notes</Text>
+              <Feather name="edit-3" size={17} color={colors.accent} />
+              <Text style={styles.sectionTitle}>Personal notes</Text>
             </View>
             <TextInput
               multiline
               value={notesText}
               onChangeText={setNotesText}
               onBlur={saveNotes}
-              placeholder="Notlarını veya kararlarını ekle / Add your notes or decisions..."
+              placeholder="Add your notes or decisions..."
               placeholderTextColor={colors.muted}
               style={[styles.textArea, { minHeight: 200 }]}
             />
           </GlassCard>
         </PageWrapper>
 
-        {/* Page 4 — Timeline */}
+        {/* Timeline */}
         <PageWrapper scrollable>
           <GlassCard>
             <View style={styles.sectionHeader}>
-              <Feather name="clock" size={18} color={colors.gold} />
-              <Text style={styles.sectionTitle}>Zaman çizgisi / Timeline</Text>
+              <Feather name="clock" size={17} color={colors.accent} />
+              <Text style={styles.sectionTitle}>Timeline</Text>
             </View>
             {segments.map((seg, idx) => (
               <TimelineSegment
@@ -311,7 +301,7 @@ export default function NoteDetailScreen() {
                 onPress={(ms) => {
                   if (!playbackError) {
                     player.seekTo(ms);
-                    goToTab(0); // jump back to player page
+                    goToTab(0);
                   }
                 }}
               />
@@ -320,7 +310,7 @@ export default function NoteDetailScreen() {
         </PageWrapper>
       </ScrollView>
 
-      {/* ── Dot pagination ── */}
+      {/* Dots */}
       <View style={styles.dots}>
         {TABS.map((_, i) => (
           <Pressable key={i} onPress={() => goToTab(i)}>
@@ -332,17 +322,17 @@ export default function NoteDetailScreen() {
   );
 }
 
-// ── Page wrapper: each page is full-screen width, vertically scrollable ──
+// Page wrapper
 const PageWrapper: React.FC<{ children: React.ReactNode; scrollable?: boolean }> = ({
   children,
   scrollable = false,
 }) => {
   const opacity = useSharedValue(0);
-  const translateY = useSharedValue(12);
+  const translateY = useSharedValue(10);
 
   useEffect(() => {
-    opacity.value = withDelay(60, withTiming(1, { duration: 280 }));
-    translateY.value = withDelay(60, withSpring(0, animations.spring));
+    opacity.value = withDelay(40, withTiming(1, { duration: 250 }));
+    translateY.value = withDelay(40, withSpring(0, animations.spring));
   }, []);
 
   const style = useAnimatedStyle(() => ({
@@ -374,7 +364,7 @@ const KeywordBadge: React.FC<{ keyword: { keyword: string; time: number }; index
   const scale = useSharedValue(0);
 
   useEffect(() => {
-    scale.value = withDelay(index * 50, withSpring(1, animations.springBouncy));
+    scale.value = withDelay(index * 40, withSpring(1, animations.springBouncy));
   }, [index, scale]);
 
   const style = useAnimatedStyle(() => ({
@@ -383,10 +373,6 @@ const KeywordBadge: React.FC<{ keyword: { keyword: string; time: number }; index
 
   return (
     <Animated.View style={[styles.keyword, style]}>
-      <LinearGradient
-        colors={['rgba(212, 175, 55, 0.15)', 'rgba(212, 175, 55, 0.05)']}
-        style={StyleSheet.absoluteFill}
-      />
       <Text style={styles.keywordLabel}>{keyword.keyword}</Text>
       <Text style={styles.keywordTime}>{formatMillis(keyword.time * 1000)}</Text>
     </Animated.View>
@@ -394,13 +380,10 @@ const KeywordBadge: React.FC<{ keyword: { keyword: string; time: number }; index
 };
 
 const styles = StyleSheet.create({
-  // ── Override GradientScreen padding so pager spans full width ──
   screen: {
     padding: 0,
     paddingBottom: 0,
   },
-
-  // ── Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -410,10 +393,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.backgroundDeep,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
@@ -424,23 +407,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
-  eyebrowBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  eyebrow: {
-    color: colors.backgroundDeep,
-    fontWeight: '800',
-    letterSpacing: 2,
-    fontSize: 10,
-  },
   title: {
     color: colors.text,
     fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   metaRow: {
     flexDirection: 'row',
@@ -459,12 +430,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
 
-  // ── Tab Bar ──
+  // Tab Bar
   tabBar: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     position: 'relative',
+    backgroundColor: colors.background,
   },
   tabItem: {
     flex: 1,
@@ -474,22 +446,23 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.muted,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   tabLabelActive: {
-    color: colors.primary,
+    color: colors.accent,
+    fontWeight: '600',
   },
   tabIndicator: {
     position: 'absolute',
     bottom: 0,
     height: 2,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     borderRadius: 1,
   },
 
-  // ── Pager ──
+  // Pager
   pager: {
     flex: 1,
   },
@@ -497,18 +470,15 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xl,
   },
-  pageCard: {
-    // GlassCard already has padding/border
-  },
-  glassSection: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+  keywordsSection: {
+    backgroundColor: colors.card,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
   },
 
-  // ── Dot pagination ──
+  // Dots
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -523,11 +493,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   dotActive: {
-    width: 20,
-    backgroundColor: colors.primary,
+    width: 18,
+    backgroundColor: colors.accent,
   },
 
-  // ── Player ──
+  // Player
   playerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -540,18 +510,16 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   playButton: {
-    borderRadius: 30,
-    overflow: 'hidden',
-  },
-  playButtonDisabled: {
-    opacity: 0.5,
-  },
-  playButtonGradient: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  playButtonDisabled: {
+    backgroundColor: colors.muted,
+    opacity: 0.5,
   },
   hint: {
     color: colors.muted,
@@ -564,7 +532,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  // ── Sections ──
+  // Sections
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -573,12 +541,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text,
-    fontWeight: '700',
+    fontWeight: '600',
     fontSize: 15,
   },
   textArea: {
     color: colors.text,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.backgroundDeep,
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
@@ -595,16 +563,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   keyword: {
+    backgroundColor: 'rgba(217, 119, 6, 0.06)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
+    borderColor: 'rgba(217, 119, 6, 0.12)',
   },
   keywordLabel: {
-    color: colors.gold,
-    fontWeight: '700',
+    color: colors.accent,
+    fontWeight: '600',
     fontSize: 13,
   },
   keywordTime: {
@@ -613,20 +581,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // ── Not found ──
+  // Not found
   notFound: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
   },
-  notFoundEmoji: {
-    fontSize: 48,
-  },
-  error: {
+  notFoundTitle: {
     color: colors.text,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   backLink: {
     flexDirection: 'row',
@@ -635,7 +600,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   link: {
-    color: colors.gold,
-    fontWeight: '700',
+    color: colors.accent,
+    fontWeight: '600',
   },
 });

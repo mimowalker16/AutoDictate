@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
-import { AnimatedBackground } from './AnimatedBackground';
-import { spacing } from '@/styles/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, spacing } from '@/styles/theme';
 
 type Props = {
   children: React.ReactNode;
@@ -14,36 +14,41 @@ export const GradientScreen: React.FC<Props> = ({
   children,
   scrollable = false,
   style,
-  showBackground = true,
 }) => {
+  const insets = useSafeAreaInsets();
+
   const content = (
-    <View style={[styles.content, style, { pointerEvents: 'box-none' }]}>
+    <View
+      style={[
+        styles.content,
+        { paddingTop: insets.top + spacing.sm },
+        style,
+        { pointerEvents: 'box-none' },
+      ]}>
       {children}
     </View>
   );
 
-  const inner = scrollable ? (
-    <ScrollView
-      contentContainerStyle={styles.scroll}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled">
-      {content}
-    </ScrollView>
-  ) : (
-    content
-  );
-
-  if (showBackground) {
-    return <AnimatedBackground>{inner}</AnimatedBackground>;
+  if (scrollable) {
+    return (
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
+          {content}
+        </ScrollView>
+      </View>
+    );
   }
 
-  return <View style={styles.fallback}>{inner}</View>;
+  return <View style={styles.container}>{content}</View>;
 };
 
 const styles = StyleSheet.create({
-  fallback: {
+  container: {
     flex: 1,
-    backgroundColor: '#0a0e1f',
+    backgroundColor: colors.background,
   },
   scroll: {
     padding: spacing.lg,
