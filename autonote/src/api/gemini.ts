@@ -68,8 +68,7 @@ OUTPUT FORMAT (valid JSON only):
 
   "flashcards": [
     { "question": "What is [term]?", "answer": "The exact definition or explanation given in the lecture" },
-    { "question": "How does [X] relate to [Y]?", "answer": "The relationship as described in the lecture" },
-    "Aim for 5–10 flashcards covering all key terms and concepts"
+    { "question": "How does [X] relate to [Y]?", "answer": "The relationship as described in the lecture" }
   ],
 
   "timed_keywords": [

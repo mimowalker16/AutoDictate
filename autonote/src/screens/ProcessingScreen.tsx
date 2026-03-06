@@ -162,8 +162,9 @@ export default function ProcessingScreen() {
           studyPlan = g.studyPlan ?? [];
           flashcards = g.flashcards ?? [];
           if (g.title?.trim()) chosenTitle = g.title.trim();
-        } catch {
-          summaryText = 'Summary unavailable.';
+        } catch (geminiErr) {
+          console.error('Gemini error:', geminiErr);
+          summaryText = `Summary unavailable: ${(geminiErr as Error).message || String(geminiErr)}`;
         }
       }
       setSummary(summaryText);
