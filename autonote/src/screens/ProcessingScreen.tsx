@@ -144,12 +144,23 @@ export default function ProcessingScreen() {
       let summaryText = 'Transcript empty.';
       let points: string[] = [];
       let acts: string[] = [];
+      let tldr = '';
+      let examQuestions: string[] = [];
+      let definitions: { term: string; definition: string }[] = [];
+      let studyPlan: string[] = [];
+      let flashcards: { question: string; answer: string }[] = [];
+
       if (transcriptText && transcriptText.length > 0) {
         try {
           const g = await summarizeWithGemini(transcriptText, timeline);
           summaryText = g.summary;
           points = g.keyPoints ?? [];
           acts = g.actionItems ?? [];
+          tldr = g.tldr ?? '';
+          examQuestions = g.examQuestions ?? [];
+          definitions = g.definitions ?? [];
+          studyPlan = g.studyPlan ?? [];
+          flashcards = g.flashcards ?? [];
           if (g.title?.trim()) chosenTitle = g.title.trim();
         } catch {
           summaryText = 'Summary unavailable.';
@@ -168,9 +179,14 @@ export default function ProcessingScreen() {
         duration: Number(params.duration ?? 0),
         date: new Date().toISOString(),
         transcript: transcriptText,
+        tldr,
         summary: summaryText,
         keyPoints: points,
         actionItems: acts,
+        examQuestions,
+        definitions,
+        studyPlan,
+        flashcards,
         notes: '',
         timeline,
         timedKeywords: estimateKeywordTimes(points ?? [], timeline),

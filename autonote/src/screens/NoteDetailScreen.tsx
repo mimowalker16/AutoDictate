@@ -299,7 +299,18 @@ export default function NoteDetailScreen() {
         </PageWrapper>
 
         {/* Summary */}
-        <PageWrapper>
+        <PageWrapper scrollable>
+          {/* TL;DR banner */}
+          {!!(note.tldr ?? '') && (
+            <View style={styles.tldrCard}>
+              <View style={styles.tldrHeader}>
+                <Feather name="zap" size={14} color={colors.accent} />
+                <Text style={styles.tldrLabel}>TL;DR</Text>
+              </View>
+              <Text style={styles.tldrText}>{note.tldr}</Text>
+            </View>
+          )}
+
           <GlassCard>
             <View style={styles.sectionHeader}>
               <Feather name="file-text" size={17} color={colors.accent} />
@@ -316,6 +327,23 @@ export default function NoteDetailScreen() {
               style={styles.textArea}
             />
           </GlassCard>
+
+          {/* Glossary */}
+          {(note.definitions ?? []).length > 0 && (
+            <GlassCard style={{ marginTop: spacing.lg }}>
+              <View style={styles.sectionHeader}>
+                <Feather name="book" size={17} color={colors.accent} />
+                <Text style={styles.sectionTitle}>Glossary</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>Key terms defined in this lecture</Text>
+              {(note.definitions ?? []).map((d, i) => (
+                <View key={i} style={[styles.definitionItem, i < (note.definitions?.length ?? 0) - 1 && styles.definitionItemBorder]}>
+                  <Text style={styles.definitionTerm}>{d.term}</Text>
+                  <Text style={styles.definitionText}>{d.definition}</Text>
+                </View>
+              ))}
+            </GlassCard>
+          )}
         </PageWrapper>
 
         {/* Points + Actions */}
@@ -356,10 +384,60 @@ export default function NoteDetailScreen() {
               style={styles.textArea}
             />
           </GlassCard>
+
+          {/* Exam Questions */}
+          {(note.examQuestions ?? []).length > 0 && (
+            <GlassCard style={{ marginTop: spacing.lg }}>
+              <View style={styles.sectionHeader}>
+                <Feather name="help-circle" size={17} color={colors.accent} />
+                <Text style={styles.sectionTitle}>Exam Questions</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>Likely questions based on what was emphasized</Text>
+              {(note.examQuestions ?? []).map((q, i) => (
+                <View key={i} style={styles.examQuestion}>
+                  <View style={styles.examQBadge}>
+                    <Text style={styles.examQNumber}>Q{i + 1}</Text>
+                  </View>
+                  <Text style={styles.examQText}>{q}</Text>
+                </View>
+              ))}
+            </GlassCard>
+          )}
+
+          {/* Study Plan */}
+          {(note.studyPlan ?? []).length > 0 && (
+            <GlassCard style={{ marginTop: spacing.lg }}>
+              <View style={styles.sectionHeader}>
+                <Feather name="check-square" size={17} color={colors.accent} />
+                <Text style={styles.sectionTitle}>Study Plan</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>Actionable steps for this lecture</Text>
+              {(note.studyPlan ?? []).map((step, i) => (
+                <View key={i} style={styles.studyStep}>
+                  <View style={styles.studyStepDot} />
+                  <Text style={styles.studyStepText}>{step}</Text>
+                </View>
+              ))}
+            </GlassCard>
+          )}
         </PageWrapper>
 
         {/* Notes */}
-        <PageWrapper>
+        <PageWrapper scrollable>
+          {/* Flashcards */}
+          {(note.flashcards ?? []).length > 0 && (
+            <GlassCard style={{ marginBottom: spacing.lg }}>
+              <View style={styles.sectionHeader}>
+                <Feather name="layers" size={17} color={colors.accent} />
+                <Text style={styles.sectionTitle}>Flashcards</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>Tap a card to reveal the answer</Text>
+              {(note.flashcards ?? []).map((f, i) => (
+                <FlashCard key={i} question={f.question} answer={f.answer} index={i} />
+              ))}
+            </GlassCard>
+          )}
+
           <GlassCard>
             <View style={styles.sectionHeader}>
               <Feather name="edit-3" size={17} color={colors.accent} />
@@ -420,6 +498,52 @@ export default function NoteDetailScreen() {
     </GradientScreen>
   );
 }
+
+// FlashCard — tap to flip between question and answer
+const FlashCard: React.FC<{ question: string; answer: string; index: number }> = ({
+  question,
+  answer,
+  index,
+}) => {
+  const [flipped, setFlipped] = React.useState(false);
+  const rotateY = useSharedValue(0);
+
+  const frontStyle = useAnimatedStyle(() => ({
+    backfaceVisibility: 'hidden',
+    transform: [{ rotateY: `${rotateY.value}deg` }],
+  }));
+
+  const backStyle = useAnimatedStyle(() => ({
+    backfaceVisibility: 'hidden',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    transform: [{ rotateY: `${rotateY.value + 180}deg` }],
+  }));
+
+  const handleFlip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const next = flipped ? 0 : 180;
+    rotateY.value = withSpring(next, { damping: 14, stiffness: 120 });
+    setFlipped(!flipped);
+  };
+
+  return (
+    <Pressable onPress={handleFlip} style={styles.flashcardWrapper}>
+      <View style={{ height: 80 }}>
+        <Animated.View style={[styles.flashcardFace, styles.flashcardFront, frontStyle]}>
+          <Text style={styles.flashcardSideLabel}>Q</Text>
+          <Text style={styles.flashcardText} numberOfLines={3}>{question}</Text>
+        </Animated.View>
+        <Animated.View style={[styles.flashcardFace, styles.flashcardBack, backStyle]}>
+          <Text style={[styles.flashcardSideLabel, { color: colors.success }]}>A</Text>
+          <Text style={[styles.flashcardText, { color: colors.text }]} numberOfLines={3}>{answer}</Text>
+        </Animated.View>
+      </View>
+    </Pressable>
+  );
+};
 
 // Page wrapper
 const PageWrapper: React.FC<{ children: React.ReactNode; scrollable?: boolean }> = ({
@@ -786,5 +910,143 @@ const styles = StyleSheet.create({
   link: {
     color: colors.accent,
     fontWeight: '600',
+  },
+
+  // TL;DR
+  tldrCard: {
+    backgroundColor: 'rgba(217, 119, 6, 0.07)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 119, 6, 0.2)',
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  tldrHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  tldrLabel: {
+    color: colors.accent,
+    fontWeight: '800',
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  tldrText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+
+  // Glossary / Definitions
+  definitionItem: {
+    paddingVertical: spacing.sm,
+  },
+  definitionItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  definitionTerm: {
+    color: colors.accent,
+    fontWeight: '700',
+    fontSize: 14,
+    marginBottom: 3,
+  },
+  definitionText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // Exam questions
+  examQuestion: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  examQBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(217, 119, 6, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  examQNumber: {
+    color: colors.accent,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  examQText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // Study plan
+  studyStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+  },
+  studyStepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+    marginTop: 6,
+    flexShrink: 0,
+  },
+  studyStepText: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // Flashcards
+  flashcardWrapper: {
+    marginTop: spacing.sm,
+  },
+  flashcardFace: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: spacing.md,
+    minHeight: 80,
+  },
+  flashcardFront: {
+    backgroundColor: colors.backgroundDeep,
+    borderColor: colors.border,
+  },
+  flashcardBack: {
+    backgroundColor: 'rgba(16, 185, 129, 0.06)',
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  flashcardSideLabel: {
+    color: colors.accent,
+    fontWeight: '800',
+    fontSize: 13,
+    width: 20,
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  flashcardText: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
