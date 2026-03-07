@@ -1,19 +1,7 @@
-import { GEMINI_API_KEY } from '@env';
+import { GROQ_API_KEY } from '@env';
 import { WordTimestamp, TimedKeyword } from '@/types/note';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
-const model = genAI?.getGenerativeModel({
-  model: 'gemini-2.0-flash',
-  generationConfig: {
-    temperature: 0.1,
-    topP: 0.9,
-    topK: 20,
-    responseMimeType: 'application/json',
-  },
-});
-
-type GeminiResponse = {
+type AIResponse = {
   title: string;
   tldr: string;
   summary: string;
@@ -100,20 +88,44 @@ export async function summarizeWithGemini(
   flashcards: { question: string; answer: string }[];
   timedKeywords: TimedKeyword[];
 }> {
-  if (!model) throw new Error('Missing GEMINI_API_KEY in .env');
+  if (!GROQ_API_KEY) throw new Error('Missing GROQ_API_KEY in .env');
 
   const prompt = buildPrompt(transcript);
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
 
-  let parsed: GeminiResponse;
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.1,
+      top_p: 0.9,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You are an academic note-taking assistant. Always respond with valid JSON only.' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`Groq API ${response.status}: ${errBody.slice(0, 300)}`);
+  }
+
+  const json = await response.json();
+  const text = json.choices?.[0]?.message?.content ?? '';
+
+  let parsed: AIResponse;
   try {
     const firstBrace = text.indexOf('{');
     const lastBrace = text.lastIndexOf('}');
     if (firstBrace === -1 || lastBrace === -1) throw new Error('No JSON found');
     parsed = JSON.parse(text.slice(firstBrace, lastBrace + 1));
   } catch (error) {
-    console.error('Gemini parse error:', error);
+    console.error('AI parse error:', error);
     console.error('Raw response:', text.slice(0, 500));
     parsed = { title: '', tldr: '', summary: text.slice(0, 300), key_points: [], study_topics: [], exam_questions: [], definitions: [], study_plan: [], flashcards: [], timed_keywords: [] };
   }
